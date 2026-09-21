@@ -205,7 +205,7 @@ export function buildShareText(input: {
   payeeName: string;
   vpa: string;
   amount: number;
-  upiUri: string;
+  payPageUrl: string;
 }): string {
   const who = input.friendName.trim();
   const greeting = who ? `Hey ${who},` : "Hey,";
@@ -216,11 +216,11 @@ export function buildShareText(input: {
     `${input.vpa}`,
     `₹${formatInr(input.amount)}`,
     "",
-    "Best: open CRED / GPay / PhonePe → Scan QR, and scan the QR I sent.",
+    "Open this page, then tap CRED (or GPay / PhonePe):",
+    input.payPageUrl,
     "",
-    "Or tap this UPI link (CRED often works; GPay often rejects it):",
-    input.upiUri,
-    "If it is not tappable, copy the upi:// line into CRED / GPay.",
+    "Or open CRED → Scan QR, and scan the QR I sent.",
+    "Do not tap a upi:// link — WhatsApp opens its own Pay, and that fails.",
   ].join("\n");
 }
 

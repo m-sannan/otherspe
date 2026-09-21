@@ -2,41 +2,30 @@
 
 Pay a merchant or personal UPI QR **on someone else's behalf**.
 
-Drop / paste a UPI QR, set an amount, get:
+Drop / paste a UPI QR, set an amount, share a **pay page** (https, not `upi://`) plus a **payment QR**. Your friend opens CRED / GPay / PhonePe from that page, or scans the QR inside their UPI app.
 
-1. A **payment QR** the payer scans inside CRED / GPay / PhonePe
-2. A **WhatsApp note** with the raw `upi://pay?…` deep link
+Money never passes through OthersPe. There is no Collect API, no webhook, and no way for this client to know the payment landed. The payee checks their UPI app.
 
-Money never passes through OthersPe. There is no Collect API, no webhook, and no way for this client to know the payment landed. The payee checks their UPI app, same as always.
+## Live
 
-## What actually works (Sep 2026)
+Vercel: *(set after first deploy)*
+
+GitHub Pages will not work — this is a TanStack Start / Nitro app, not a static site.
+
+## What actually works
 
 | Path | Result |
 | --- | --- |
-| Scan the generated QR inside **CRED** | Payment went through |
-| Scan the generated QR inside GPay / PhonePe | Usually works for personal VPAs |
-| Tap the `upi://` link from Chrome or WhatsApp | Hit-or-miss. GPay often shows “Payment couldn’t be completed.” CRED is worth trying. |
-| Sample kirana QR (`guptakirana@okhdfcbank`) | Fake VPA. Always fails. |
+| Scan the generated QR inside **CRED** | Payment went through on a real QR |
+| CRED / GPay / PhonePe / Paytm buttons on `/pay` | Android intent with the app's package — not WhatsApp Pay |
+| WhatsApp share | Sends the https `/pay` page, never a raw `upi://` (WhatsApp hijacks that into WhatsApp Pay) |
+| Sample kirana QR (`guptakirana@okhdfcbank`) | Fake VPA. Always fails. Use a real QR. |
 
-This is the same primitive SplitPe uses (parse QR → rewrite `am` → new QR / intent). SplitPe adds tranching and a local “Simulate paid” button. OthersPe does not.
-
-## This repo
-
-Extracted prototype logic from the browser app:
-
-```
-src/lib/upi.ts              parse / rebuild UPI URI + Bharat QR (with CRC)
-src/lib/upi.test.ts         parser + URI + CRC tests
-src/lib/decode-qr.ts        jsQR + QR encode
-src/components/otherspe-app.tsx   the one-screen UI
-```
-
-The live UI is a TanStack Start + Tailwind app. These files are the product; they are not a standalone `npm start` tree.
-
-## Run the unit tests
+## Local
 
 ```bash
-node --experimental-strip-types --test src/lib/upi.test.ts
+npm install
+npm run dev
 ```
 
 ## UPI URI we emit

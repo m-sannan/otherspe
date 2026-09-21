@@ -63,12 +63,13 @@ test("builds a shareable UPI URI without encoding @ in pa", () => {
     payeeName: "Gupta Kirana",
     vpa: "guptakirana@okhdfcbank",
     amount: 430,
-    upiUri: uri,
+    payPageUrl: "https://example.com/pay?pa=guptakirana@okhdfcbank&am=430.00",
   });
   assert.match(text, /Hey Rohit/);
   assert.match(text, /₹430.00/);
-  assert.match(text, /Scan QR/);
-  assert.match(text, /upi:\/\/pay\?pa=guptakirana@okhdfcbank/);
+  assert.match(text, /https:\/\/example.com\/pay/);
+  assert.match(text, /WhatsApp opens its own Pay/);
+  assert.doesNotMatch(text, /upi:\/\/pay/);
 });
 
 test("rebuilds Bharat QR with amount and a valid CRC", () => {

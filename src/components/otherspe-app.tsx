@@ -6,13 +6,16 @@ import {
   ImagePlus,
   Link2,
   RotateCcw,
+  Share2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UpiAppButtons } from "@/components/upi-app-buttons";
 import { decodeQrFromBlob, makeSampleQrBlob, qrDataUrl } from "@/lib/decode-qr";
+import { buildPaySearch } from "@/lib/upi-apps";
 import {
   buildQrPayload,
   buildShareText,
@@ -45,7 +48,7 @@ export function OthersPeApp() {
   const [note, setNote] = useState("");
   const [pasteValue, setPasteValue] = useState("");
   const [dragging, setDragging] = useState(false);
-  const [copied, setCopied] = useState<"message" | "link" | "qr" | null>(null);
+  const [copied, setCopied] = useState<"message" | "link" | "qr" | "page" | null>(null);
   const [payQrUrl, setPayQrUrl] = useState<string | null>(null);
 
   const amount = parseAmount(amountInput);
@@ -77,16 +80,30 @@ export function OthersPeApp() {
     });
   }, [payload, amount, note, friendName, txnRef]);
 
-  const message = useMemo(() => {
+  const payPageUrl = useMemo(() => {
     if (!payload || amount == null) return "";
+    const query = buildPaySearch({
+      vpa: payload.vpa,
+      name: payload.name,
+      amount,
+      note: note.trim() || (friendName.trim() ? `Paid for ${friendName.trim()}` : payload.note),
+      mcc: payload.mcc,
+      txnRef,
+    });
+    const origin = typeof window === "undefined" ? "" : window.location.origin;
+    return origin ? `${origin}/pay?${query}` : `/pay?${query}`;
+  }, [payload, amount, note, friendName, txnRef]);
+
+  const message = useMemo(() => {
+    if (!payload || amount == null || !payPageUrl) return "";
     return buildShareText({
       friendName,
       payeeName: payload.name,
       vpa: payload.vpa,
       amount,
-      upiUri,
+      payPageUrl,
     });
-  }, [payload, amount, friendName, upiUri]);
+  }, [payload, amount, friendName, payPageUrl]);
 
   useEffect(() => {
     if (!qrPayload) {
@@ -203,11 +220,17 @@ export function OthersPeApp() {
     setPayQrUrl(null);
   };
 
-  const copyText = async (value: string, kind: "message" | "link") => {
+  const copyText = async (value: string, kind: "message" | "link" | "page") => {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(kind);
-      toast(kind === "message" ? "Note copied" : "UPI link copied");
+      toast(
+        kind === "message"
+          ? "Note copied"
+          : kind === "page"
+            ? "Pay page copied"
+            : "UPI link copied",
+      );
       window.setTimeout(() => setCopied(null), 1600);
     } catch {
       toast("Could not copy. Select the text instead.");
@@ -230,9 +253,9 @@ export function OthersPeApp() {
               OthersPe
             </p>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Drop a merchant or personal UPI QR. We turn it into a QR and a
-              UPI link your friend can pay — scan inside CRED / GPay works;
-              tapping the link is hit-or-miss by app.
+              Drop a UPI QR. Share a page with CRED / GPay / PhonePe buttons,
+              or a QR they scan. Do not send a upi:// link on WhatsApp — it
+              opens WhatsApp Pay and dies.
             </p>
           </div>
           {payload ? (
@@ -278,6 +301,7 @@ export function OthersPeApp() {
             amount={amount}
             message={message}
             upiUri={upiUri}
+            payPageUrl={payPageUrl}
             payQrUrl={payQrUrl}
             isDemo={isDemoPayload(payload)}
             copied={copied}
@@ -285,7 +309,7 @@ export function OthersPeApp() {
             onFriend={setFriendName}
             onNote={setNote}
             onCopyMessage={() => void copyText(message, "message")}
-            onCopyLink={() => void copyText(upiUri, "link")}
+            onCopyPage={() => void copyText(payPageUrl, "page")}
             onCopyQr={async () => {
               if (!payQrUrl) return;
               try {
@@ -300,14 +324,33 @@ export function OthersPeApp() {
                 toast("Could not copy the QR. Save it instead.");
               }
             }}
+            onShareQr={async () => {
+              if (!payQrUrl) return;
+              try {
+                const blob = await (await fetch(payQrUrl)).blob();
+                const file = new File([blob], "otherspe-pay.png", {
+                  type: blob.type || "image/png",
+                });
+                if (navigator.canShare?.({ files: [file] })) {
+                  await navigator.share({
+                    files: [file],
+                    text: message,
+                    title: "Pay this for me",
+                  });
+                  return;
+                }
+                toast("This browser can't attach a QR. Save it and send the image.");
+              } catch {
+                toast("Share cancelled.");
+              }
+            }}
           />
         )}
 
         <p className="mt-12 text-xs leading-relaxed text-muted-foreground">
-          Scanning the QR inside CRED / PhonePe / GPay is the reliable path.
-          The WhatsApp message now includes the raw upi:// link so they can
-          try tapping it too. We still cannot confirm the transfer — they
-          check their UPI app.
+          WhatsApp intercepts upi:// and opens WhatsApp Pay — that is the
+          “something went wrong.” Send the pay page (https) or the QR instead.
+          We still cannot confirm the transfer.
         </p>
       </div>
     </div>
@@ -443,6 +486,8 @@ function Composer({
   note,
   amount,
   message,
+  upiUri,
+  payPageUrl,
   payQrUrl,
   isDemo,
   copied,
@@ -450,8 +495,9 @@ function Composer({
   onFriend,
   onNote,
   onCopyMessage,
-  onCopyLink,
+  onCopyPage,
   onCopyQr,
+  onShareQr,
 }: {
   payload: UpiPayload;
   previewUrl: string | null;
@@ -461,15 +507,17 @@ function Composer({
   amount: number | null;
   message: string;
   upiUri: string;
+  payPageUrl: string;
   payQrUrl: string | null;
   isDemo: boolean;
-  copied: "message" | "link" | "qr" | null;
+  copied: "message" | "link" | "qr" | "page" | null;
   onAmount: (value: string) => void;
   onFriend: (value: string) => void;
   onNote: (value: string) => void;
   onCopyMessage: () => void;
-  onCopyLink: () => void;
+  onCopyPage: () => void;
   onCopyQr: () => void;
+  onShareQr: () => void;
 }) {
   const whatsappHref =
     amount != null
@@ -566,7 +614,7 @@ function Composer({
 
       <section className="rounded-xl bg-paper p-5 text-ink sm:p-6">
         <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">
-          Scan this inside GPay
+          Scan this inside CRED
         </p>
         {amount == null ? (
           <p className="mt-4 text-sm leading-relaxed text-ink-muted">
@@ -585,11 +633,22 @@ function Composer({
               <div className="size-52 rounded-md bg-ink/5 sm:size-56" />
             )}
             <p className="max-w-sm text-center text-sm leading-relaxed text-ink-muted">
-              Open CRED / GPay / PhonePe → Scan QR. WhatsApp also gets the
-              upi:// link if they want to try tapping it.
+              Scan still works. Do not send a upi:// link on WhatsApp — it
+              opens WhatsApp Pay.
             </p>
           </div>
         )}
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Open in a specific app
+        </p>
+        <p className="mt-2 mb-3 text-sm leading-relaxed text-muted-foreground">
+          Use these on this phone. Your friend gets the same buttons on the
+          pay page.
+        </p>
+        <UpiAppButtons upiUri={upiUri} disabled={amount == null} />
       </section>
 
       <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
@@ -613,6 +672,16 @@ function Composer({
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Button
           type="button"
+          className="flex-1"
+          disabled={amount == null || !payQrUrl}
+          onClick={onShareQr}
+        >
+          <Share2 />
+          Share QR
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
           className="flex-1"
           disabled={amount == null || !payQrUrl}
           onClick={onCopyQr}
@@ -662,11 +731,11 @@ function Composer({
           type="button"
           variant="ghost"
           className="flex-1"
-          disabled={amount == null}
-          onClick={onCopyLink}
+          disabled={!payPageUrl}
+          onClick={onCopyPage}
         >
-          {copied === "link" ? <Check /> : <Link2 />}
-          Copy UPI link
+          {copied === "page" ? <Check /> : <Link2 />}
+          Copy pay page
         </Button>
       </div>
     </div>
