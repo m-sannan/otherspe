@@ -23,11 +23,11 @@ export function UpiAppButtons({
     return (
       <div className="grid grid-cols-2 gap-2">
         {UPI_APPS.map((app) => (
-          <Button key={app.id} type="button" variant="secondary" disabled>
+          <Button key={app.id} type="button" variant="secondary" className="h-12 whitespace-normal" disabled>
             {app.label}
           </Button>
         ))}
-        <Button type="button" variant="outline" className="col-span-2" disabled>
+        <Button type="button" variant="outline" className="col-span-2 h-12" disabled>
           Any UPI app
         </Button>
       </div>
@@ -37,14 +37,14 @@ export function UpiAppButtons({
   return (
     <div className="grid grid-cols-2 gap-2">
       {UPI_APPS.map((app) => (
-        <Button key={app.id} type="button" variant="secondary" asChild>
+        <Button key={app.id} type="button" variant="secondary" className="h-12 whitespace-normal" asChild>
           <a href={buildAppHref(upiUri, app, android)} rel="noreferrer">
             {app.label}
           </a>
         </Button>
       ))}
       {android ? (
-        <Button type="button" variant="outline" className="col-span-2" asChild>
+        <Button type="button" variant="outline" className="col-span-2 h-12" asChild>
           <a href={buildChooserHref(upiUri)} rel="noreferrer">
             Any UPI app
           </a>

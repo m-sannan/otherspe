@@ -41,12 +41,42 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow-x: clip;
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    max-width: 100%;
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  /*
+    Chrome and Safari zoom the page when a focused field is under 16px.
+    That is the “keeps zooming in” feeling on a phone.
+  */
+  input,
+  select,
+  textarea {
+    font-size: 1rem;
+  }
+
+  button,
+  a,
+  [role="button"],
+  label,
+  input,
+  textarea,
+  select {
+    touch-action: manipulation;
   }
 
   button:not(:disabled),
@@ -58,11 +88,19 @@
   h2,
   h3 {
     text-wrap: balance;
+    overflow-wrap: break-word;
   }
 
   p {
     text-wrap: pretty;
+    overflow-wrap: break-word;
   }
+}
+
+.page-shell {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @media (prefers-reduced-motion: reduce) {

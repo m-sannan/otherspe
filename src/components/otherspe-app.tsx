@@ -245,11 +245,11 @@ export function OthersPeApp() {
   };
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto flex w-full max-w-3xl flex-col px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
-        <header className="mb-10 flex items-baseline justify-between gap-4">
-          <div>
-            <p className="font-display text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
+    <div className="page-shell min-h-dvh overflow-x-clip bg-background text-foreground">
+      <div className="mx-auto flex w-full max-w-3xl flex-col px-4 pb-16 pt-6 sm:px-6 sm:pt-12">
+        <header className="mb-8 flex flex-col gap-3 sm:mb-10 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <p className="font-display text-3xl font-medium tracking-tight text-foreground">
               OthersPe
             </p>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
@@ -259,7 +259,7 @@ export function OthersPeApp() {
             </p>
           </div>
           {payload ? (
-            <Button variant="ghost" size="sm" onClick={reset} className="shrink-0">
+            <Button variant="ghost" onClick={reset} className="h-11 shrink-0 self-start">
               <RotateCcw />
               New QR
             </Button>
@@ -416,7 +416,7 @@ function IdlePanel({
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         className={cn(
-          "flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-10 text-center transition-[border-color,background-color] duration-[var(--motion-fast)] ease-[var(--ease-out)]",
+          "flex min-h-48 w-full flex-col items-center justify-center rounded-xl border border-dashed px-5 py-8 text-center transition-[border-color,background-color] duration-[var(--motion-fast)] ease-[var(--ease-out)] sm:min-h-56 sm:px-6 sm:py-10",
           dragging
             ? "border-primary bg-muted"
             : "border-border bg-card hover:border-primary/50",
@@ -449,12 +449,16 @@ function IdlePanel({
 
       <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
         <Label htmlFor="paste-upi">Or paste a UPI link / ID</Label>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+        <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row">
           <Input
             id="paste-upi"
             value={pasteValue}
             onChange={(e) => onPasteValue(e.target.value)}
-            placeholder="upi://pay?pa=name@oksbi or 9876543210@ybl"
+            placeholder="name@oksbi or upi://pay?…"
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
             onKeyDown={(e) => {
               if (e.key === "Enter") onSubmitPaste();
             }}
@@ -462,7 +466,7 @@ function IdlePanel({
           <Button
             type="button"
             variant="secondary"
-            className="sm:w-28"
+            className="h-12 w-full sm:w-28"
             onClick={onSubmitPaste}
             disabled={!pasteValue.trim()}
           >
@@ -527,7 +531,7 @@ function Composer({
   return (
     <div className="flex flex-col gap-6">
       <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex items-start gap-4">
+        <div className="flex min-w-0 items-start gap-4">
           {previewUrl ? (
             <img
               src={previewUrl}
@@ -543,10 +547,10 @@ function Composer({
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               {SOURCE_LABEL[payload.source]}
             </p>
-            <p className="mt-1 truncate font-display text-xl font-medium text-foreground">
+            <p className="mt-1 break-words font-display text-xl font-medium text-foreground">
               {payload.name}
             </p>
-            <p className="mt-0.5 truncate font-mono text-sm text-muted-foreground">
+            <p className="mt-0.5 break-all font-mono text-sm text-muted-foreground">
               {payload.vpa}
             </p>
           </div>
@@ -574,10 +578,12 @@ function Composer({
             <Input
               id="amount"
               inputMode="decimal"
+              enterKeyHint="done"
+              autoComplete="off"
               value={amountInput}
               onChange={(e) => onAmount(e.target.value)}
               placeholder="0.00"
-              className="pl-7 font-mono tabular-nums"
+              className="pl-7 font-mono text-base tabular-nums"
               data-testid="amount"
             />
           </div>
@@ -627,10 +633,10 @@ function Composer({
                 src={payQrUrl}
                 alt="Payment QR"
                 data-testid="pay-qr"
-                className="size-52 rounded-md sm:size-56"
+                className="aspect-square w-full max-w-52 rounded-md sm:max-w-56"
               />
             ) : (
-              <div className="size-52 rounded-md bg-ink/5 sm:size-56" />
+              <div className="aspect-square w-full max-w-52 rounded-md bg-ink/5 sm:max-w-56" />
             )}
             <p className="max-w-sm text-center text-sm leading-relaxed text-ink-muted">
               Scan still works. Do not send a upi:// link on WhatsApp — it
@@ -662,17 +668,17 @@ function Composer({
         ) : (
           <pre
             data-testid="share-message"
-            className="mt-3 whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground"
+            className="mt-3 max-w-full overflow-x-auto whitespace-pre-wrap break-all font-sans text-sm leading-relaxed text-foreground"
           >
             {message}
           </pre>
         )}
       </section>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <div className="grid grid-cols-2 gap-2">
         <Button
           type="button"
-          className="flex-1"
+          className="col-span-2 h-12 whitespace-normal"
           disabled={amount == null || !payQrUrl}
           onClick={onShareQr}
         >
@@ -682,7 +688,7 @@ function Composer({
         <Button
           type="button"
           variant="secondary"
-          className="flex-1"
+          className="h-12 whitespace-normal"
           disabled={amount == null || !payQrUrl}
           onClick={onCopyQr}
         >
@@ -690,14 +696,14 @@ function Composer({
           Copy QR
         </Button>
         {payQrUrl ? (
-          <Button type="button" variant="secondary" className="flex-1" asChild>
+          <Button type="button" variant="secondary" className="h-12 whitespace-normal" asChild>
             <a href={payQrUrl} download="otherspe-pay.png">
               <Download />
               Save QR
             </a>
           </Button>
         ) : (
-          <Button type="button" variant="secondary" className="flex-1" disabled>
+          <Button type="button" variant="secondary" className="h-12 whitespace-normal" disabled>
             <Download />
             Save QR
           </Button>
@@ -705,7 +711,7 @@ function Composer({
         <Button
           type="button"
           variant="secondary"
-          className="flex-1"
+          className="h-12 whitespace-normal"
           disabled={amount == null}
           onClick={onCopyMessage}
         >
@@ -715,22 +721,22 @@ function Composer({
         <Button
           type="button"
           variant="outline"
-          className="flex-1"
+          className="h-12 whitespace-normal"
           disabled={!whatsappHref}
           asChild={Boolean(whatsappHref)}
         >
           {whatsappHref ? (
             <a href={whatsappHref} target="_blank" rel="noreferrer">
-              Open WhatsApp
+              WhatsApp
             </a>
           ) : (
-            <span>Open WhatsApp</span>
+            <span>WhatsApp</span>
           )}
         </Button>
         <Button
           type="button"
           variant="ghost"
-          className="flex-1"
+          className="col-span-2 h-12 whitespace-normal"
           disabled={!payPageUrl}
           onClick={onCopyPage}
         >

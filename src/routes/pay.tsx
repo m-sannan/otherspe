@@ -81,7 +81,7 @@ function PayPage() {
 
   if (!payload || amount == null) {
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-12 text-foreground">
+      <main className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center overflow-x-clip px-4 py-12 text-foreground">
         <p className="font-display text-2xl font-medium">OthersPe</p>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           This payment link is missing a UPI ID or amount.
@@ -94,14 +94,14 @@ function PayPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col px-4 py-10 text-foreground">
+    <main className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-clip px-4 py-8 text-foreground sm:py-10">
       <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
         Pay for someone
       </p>
-      <h1 className="mt-2 font-display text-3xl font-medium tracking-tight">
+      <h1 className="mt-2 break-words font-display text-3xl font-medium tracking-tight">
         {payload.name}
       </h1>
-      <p className="mt-1 font-mono text-sm text-muted-foreground">{payload.vpa}</p>
+      <p className="mt-1 break-all font-mono text-sm text-muted-foreground">{payload.vpa}</p>
       <p className="mt-6 font-display text-4xl font-medium tabular-nums">
         ₹{formatInr(amount)}
       </p>
@@ -111,10 +111,10 @@ function PayPage() {
           <img
             src={qrUrl}
             alt="Payment QR"
-            className="mx-auto size-52 rounded-md"
+            className="mx-auto aspect-square w-full max-w-52 rounded-md"
           />
         ) : (
-          <div className="mx-auto size-52 rounded-md bg-ink/5" />
+          <div className="mx-auto aspect-square w-full max-w-52 rounded-md bg-ink/5" />
         )}
         <p className="mt-4 text-center text-sm leading-relaxed text-ink-muted">
           Scan this inside CRED / GPay / PhonePe. Buttons below try to open
