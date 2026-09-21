@@ -8,7 +8,7 @@ Money never passes through OthersPe. There is no Collect API, no webhook, and no
 
 ## Live
 
-Vercel: *(set after first deploy)*
+Live: **https://otherspe.vercel.app**
 
 GitHub Pages will not work — this is a TanStack Start / Nitro app, not a static site.
 
