@@ -54,7 +54,7 @@ export const Route = createRootRoute({
           <Outlet />
           <Toaster
             theme="light"
-            position="bottom-center"
+            position="top-center"
             toastOptions={{
               style: {
                 background: "#111111",

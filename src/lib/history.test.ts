@@ -9,6 +9,7 @@ import {
   setRequestStatus,
   upsertRequest,
   deleteRequest,
+  payloadFromSaved,
   type SavedRequest,
 } from "./history.ts";
 
@@ -63,4 +64,20 @@ test("deleteRequest removes one item and keeps the rest", () => {
   const next = deleteRequest("b", s);
   assert.equal(next.length, 1);
   assert.equal(next[0]?.id, "a");
+});
+
+test("upsert of the same id updates amount in place", () => {
+  const s = memory();
+  upsertRequest(sample("a"), s);
+  const next = upsertRequest({ ...sample("a"), amount: 99, status: "waiting" }, s);
+  assert.equal(next.length, 1);
+  assert.equal(next[0]?.amount, 99);
+});
+
+test("payloadFromSaved round-trips merchant fields", () => {
+  const payload = payloadFromSaved(sample("a"));
+  assert.equal(payload.vpa, "gupta@oksbi");
+  assert.equal(payload.amount, 430);
+  assert.equal(payload.txnRef, "a");
+  assert.equal(payload.source, "upi-uri");
 });

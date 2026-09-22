@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  FALLBACK_APPS,
-  PRIMARY_APP,
+  CRED_APP,
+  buildAnyAppHref,
   buildAppHref,
-  buildChooserHref,
   isAndroidUa,
 } from "@/lib/upi-apps";
 
@@ -20,10 +19,9 @@ export function UpiAppButtons({
     [],
   );
 
-  if (!PRIMARY_APP) return null;
-
   const ready = Boolean(upiUri) && !disabled;
-  const credHref = ready ? buildAppHref(upiUri, PRIMARY_APP, android) : undefined;
+  const credHref = ready ? buildAppHref(upiUri, CRED_APP, android) : undefined;
+  const anyHref = ready ? buildAnyAppHref(upiUri, android) : undefined;
 
   return (
     <div className="flex flex-col gap-2">
@@ -39,50 +37,23 @@ export function UpiAppButtons({
         </Button>
       )}
 
-      {android && ready ? (
+      {anyHref ? (
         <Button type="button" variant="secondary" className="h-12 w-full bg-paper" asChild>
-          <a href={buildChooserHref(upiUri)} rel="noreferrer" data-testid="open-chooser">
-            Any other UPI app
+          <a href={anyHref} rel="noreferrer" data-testid="open-chooser">
+            Pay using any other app
           </a>
         </Button>
       ) : (
-        <p className="rounded-full bg-paper/70 px-4 py-3 text-center text-sm leading-relaxed text-ink-muted">
-          Any other UPI app — scan the QR above
-        </p>
+        <Button type="button" variant="secondary" className="h-12 w-full bg-paper" disabled>
+          Pay using any other app
+        </Button>
       )}
 
-      <p className="mt-2 text-center text-xs leading-relaxed text-ink-muted">
-        Google Pay, PhonePe and Paytm often reject this kind of QR. If they fail,
-        don’t retry the button — open the app and scan the QR instead.
+      <p className="mt-1 text-center text-xs leading-relaxed text-ink-muted">
+        Google Pay, PhonePe and Paytm block paying from this page’s buttons — they
+        don’t reject the QR. Scan it instead; that works. CRED opens from the
+        button. Other UPI apps (super.money, Jupiter, BHIM…) are worth a try.
       </p>
-
-      <div className="grid grid-cols-3 gap-2">
-        {FALLBACK_APPS.map((app) =>
-          ready ? (
-            <Button
-              key={app.id}
-              type="button"
-              variant="outline"
-              className="h-11 whitespace-normal bg-paper/40 px-1 text-xs font-medium leading-tight"
-              asChild
-            >
-              <a href={buildAppHref(upiUri, app, android)} rel="noreferrer">
-                {app.label}
-              </a>
-            </Button>
-          ) : (
-            <Button
-              key={app.id}
-              type="button"
-              variant="outline"
-              className="h-11 whitespace-normal px-1 text-xs"
-              disabled
-            >
-              {app.label}
-            </Button>
-          ),
-        )}
-      </div>
     </div>
   );
 }

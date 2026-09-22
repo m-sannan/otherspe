@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { amountFromDigits, applyAmountKey, formatAmountDigits } from "./amount.ts";
+import { amountFromDigits, applyAmountKey, digitsFromAmount, formatAmountDigits } from "./amount.ts";
 
 test("appends digits and a single decimal", () => {
   assert.equal(applyAmountKey("", "5"), "5");
@@ -32,4 +32,11 @@ test("parses a payable amount", () => {
   assert.equal(amountFromDigits("50.5"), 50.5);
   assert.equal(amountFromDigits(""), null);
   assert.equal(amountFromDigits("0."), null);
+});
+
+test("turns a saved amount back into keypad digits", () => {
+  assert.equal(digitsFromAmount(430), "430");
+  assert.equal(digitsFromAmount(12.5), "12.5");
+  assert.equal(digitsFromAmount(1.25), "1.25");
+  assert.equal(digitsFromAmount(0), "");
 });

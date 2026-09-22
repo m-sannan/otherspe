@@ -217,7 +217,7 @@ export function buildShareText(input: {
   return [
     `Pay ₹${formatInrPretty(input.amount)} to ${input.payeeName}`,
     "",
-    "Open this page, then tap CRED — or scan the QR.",
+    "Open this page. Tap CRED, try any other UPI app, or scan the QR.",
     input.payPageUrl,
   ].join("\n");
 }

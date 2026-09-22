@@ -37,3 +37,8 @@ export function amountFromDigits(raw: string): number | null {
   if (!Number.isFinite(n) || n <= 0 || n > MAX_RUPEES) return null;
   return Math.round(n * 100) / 100;
 }
+
+export function digitsFromAmount(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return String(Math.round(n * 100) / 100);
+}

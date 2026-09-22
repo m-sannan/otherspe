@@ -30,9 +30,16 @@ export const Route = createFileRoute("/pay")({
 });
 
 function str(value: unknown): string | undefined {
-  if (typeof value === "string" && value.trim()) return value;
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return undefined;
+  if (typeof value !== "string") return undefined;
+  let s = value.trim();
+  if (
+    (s.startsWith('"') && s.endsWith('"') && s.length >= 2) ||
+    (s.startsWith("'") && s.endsWith("'") && s.length >= 2)
+  ) {
+    s = s.slice(1, -1).trim();
+  }
+  return s || undefined;
 }
 
 function PayPage() {
@@ -123,7 +130,8 @@ function PayPage() {
             <div className="mx-auto aspect-square w-full max-w-48 rounded-xl bg-paper-muted" />
           )}
           <p className="mt-3 text-center text-xs leading-relaxed text-haze">
-            Tap CRED — that’s the one that completes. If you’re inside WhatsApp, open this page in Chrome first.
+            Scan this QR in any UPI app — Google Pay included. If you’re inside
+            WhatsApp, open this page in Chrome first.
           </p>
         </section>
 

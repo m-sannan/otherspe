@@ -1,4 +1,4 @@
-export type UpiAppId = "cred" | "gpay" | "phonepe" | "paytm";
+export type UpiAppId = "cred";
 
 export type UpiApp = {
   id: UpiAppId;
@@ -8,37 +8,15 @@ export type UpiApp = {
   androidPackage: string;
 };
 
-export const UPI_APPS: UpiApp[] = [
-  {
-    id: "cred",
-    label: "CRED",
-    scheme: "credpay://upi/pay",
-    androidPackage: "com.dreamplug.androidapp",
-  },
-  {
-    id: "gpay",
-    label: "Google Pay",
-    scheme: "tez://upi/pay",
-    androidPackage: "com.google.android.apps.nbu.paisa.user",
-  },
-  {
-    id: "phonepe",
-    label: "PhonePe",
-    scheme: "phonepe://pay",
-    androidPackage: "com.phonepe.app",
-  },
-  {
-    id: "paytm",
-    label: "Paytm",
-    scheme: "paytmmp://pay",
-    androidPackage: "net.one97.paytm",
-  },
-];
+/** CRED is the one named app whose in-app / deep-link pay actually completes. */
+export const CRED_APP: UpiApp = {
+  id: "cred",
+  label: "CRED",
+  scheme: "credpay://upi/pay",
+  androidPackage: "com.dreamplug.androidapp",
+};
 
-export const PRIMARY_APP = UPI_APPS[0];
-
-export const FALLBACK_APPS = UPI_APPS.filter((app) => app.id !== "cred");
-
+export const UPI_APPS: UpiApp[] = [CRED_APP];
 
 export function upiQueryString(upiUri: string): string {
   const i = upiUri.indexOf("?");
@@ -62,6 +40,15 @@ export function buildAppHref(upiUri: string, app: UpiApp, android = false): stri
 export function buildChooserHref(upiUri: string): string {
   const q = upiQueryString(upiUri);
   return `intent://pay?${q}#Intent;scheme=upi;end`;
+}
+
+/**
+ * Let the OS pick any UPI app (super.money, Jupiter, BHIM, …).
+ * Android: packageless intent. Elsewhere: generic upi:// (WhatsApp may still intercept).
+ */
+export function buildAnyAppHref(upiUri: string, android = false): string {
+  if (android) return buildChooserHref(upiUri);
+  return `upi://pay?${upiQueryString(upiUri)}`;
 }
 
 export function buildPaySearch(input: {

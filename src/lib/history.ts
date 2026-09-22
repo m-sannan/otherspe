@@ -1,4 +1,4 @@
-import type { UpiSource } from "./upi";
+import type { UpiPayload, UpiSource } from "./upi";
 
 export type RequestStatus = "waiting" | "got-it";
 
@@ -99,6 +99,20 @@ export function deleteRequest(
   const next = loadRequests(storage).filter((r) => r.id !== id);
   saveRequests(next, storage);
   return next;
+}
+
+export function payloadFromSaved(item: SavedRequest): UpiPayload {
+  return {
+    vpa: item.vpa,
+    name: item.name,
+    amount: item.amount,
+    currency: "INR",
+    note: item.note,
+    mcc: item.mcc,
+    txnRef: item.txnRef,
+    source: item.source,
+    raw: item.raw,
+  };
 }
 
 function isSavedRequest(value: unknown): value is SavedRequest {
