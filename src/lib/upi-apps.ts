@@ -1,4 +1,14 @@
-export type UpiAppId = "cred";
+export type UpiAppId =
+  | "cred"
+  | "gpay"
+  | "phonepe"
+  | "paytm"
+  | "bhim"
+  | "supermoney"
+  | "jupiter"
+  | "amazon"
+  | "mobikwik"
+  | "airtel";
 
 export type UpiApp = {
   id: UpiAppId;
@@ -16,7 +26,68 @@ export const CRED_APP: UpiApp = {
   androidPackage: "com.dreamplug.androidapp",
 };
 
-export const UPI_APPS: UpiApp[] = [CRED_APP];
+/**
+ * Package-specific targets so Android does not dump the user into whatever
+ * app is set as the default UPI handler (Check UPI, BHIM, …).
+ */
+export const PICKER_APPS: UpiApp[] = [
+  {
+    id: "gpay",
+    label: "Google Pay",
+    scheme: "tez://upi/pay",
+    androidPackage: "com.google.android.apps.nbu.paisa.user",
+  },
+  {
+    id: "phonepe",
+    label: "PhonePe",
+    scheme: "phonepe://pay",
+    androidPackage: "com.phonepe.app",
+  },
+  {
+    id: "paytm",
+    label: "Paytm",
+    scheme: "paytmmp://pay",
+    androidPackage: "net.one97.paytm",
+  },
+  {
+    id: "supermoney",
+    label: "super.money",
+    scheme: "super://pay",
+    androidPackage: "money.super.payments",
+  },
+  {
+    id: "jupiter",
+    label: "Jupiter",
+    scheme: "jupiter://pay",
+    androidPackage: "money.jupiter",
+  },
+  {
+    id: "bhim",
+    label: "BHIM",
+    scheme: "bhim://pay",
+    androidPackage: "in.org.npci.upiapp",
+  },
+  {
+    id: "amazon",
+    label: "Amazon Pay",
+    scheme: "amazonpay://upi/pay",
+    androidPackage: "in.amazon.mShop.android.shopping",
+  },
+  {
+    id: "mobikwik",
+    label: "Mobikwik",
+    scheme: "mobikwik://upi/pay",
+    androidPackage: "com.mobikwik_new",
+  },
+  {
+    id: "airtel",
+    label: "Airtel Thanks",
+    scheme: "myairtel://upi_welcome_screen",
+    androidPackage: "com.myairtelapp",
+  },
+];
+
+export const UPI_APPS: UpiApp[] = [CRED_APP, ...PICKER_APPS];
 
 export function upiQueryString(upiUri: string): string {
   const i = upiUri.indexOf("?");
@@ -27,28 +98,16 @@ export function isAndroidUa(ua = ""): boolean {
   return /android/i.test(ua);
 }
 
-/** App-specific href. Android uses an intent URL so the OS opens that package, not WhatsApp Pay. */
+/** App-specific href. Android uses an intent URL so the OS opens that package, not the default UPI app. */
 export function buildAppHref(upiUri: string, app: UpiApp, android = false): string {
   const q = upiQueryString(upiUri);
   if (android) {
-    return `intent://pay?${q}#Intent;scheme=upi;package=${app.androidPackage};end`;
+    const store = encodeURIComponent(
+      `https://play.google.com/store/apps/details?id=${app.androidPackage}`,
+    );
+    return `intent://pay?${q}#Intent;scheme=upi;package=${app.androidPackage};S.browser_fallback_url=${store};end`;
   }
   return `${app.scheme}?${q}`;
-}
-
-/** Android chooser — any installed UPI app, still not WhatsApp's in-app Pay. */
-export function buildChooserHref(upiUri: string): string {
-  const q = upiQueryString(upiUri);
-  return `intent://pay?${q}#Intent;scheme=upi;end`;
-}
-
-/**
- * Let the OS pick any UPI app (super.money, Jupiter, BHIM, …).
- * Android: packageless intent. Elsewhere: generic upi:// (WhatsApp may still intercept).
- */
-export function buildAnyAppHref(upiUri: string, android = false): string {
-  if (android) return buildChooserHref(upiUri);
-  return `upi://pay?${upiQueryString(upiUri)}`;
 }
 
 export function buildPaySearch(input: {

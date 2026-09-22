@@ -17,7 +17,7 @@ import {
   payloadFromSaved,
   type SavedRequest,
 } from "@/lib/history";
-import { copyText } from "@/lib/clipboard";
+import { copyTextNow } from "@/lib/clipboard";
 import { buildPaySearch } from "@/lib/upi-apps";
 import { amountFromDigits, applyAmountKey, digitsFromAmount, formatAmountDigits } from "@/lib/amount";
 import { decodeQrFromBlob, makeSampleQrBlob, qrDataUrl } from "@/lib/decode-qr";
@@ -562,8 +562,8 @@ function ShareScreen({
     window.setTimeout(() => setCopied(false), 2000);
   };
 
-  const copy = async () => {
-    const ok = await copyText(payPageUrl);
+  const copy = () => {
+    const ok = copyTextNow(payPageUrl, urlRef.current);
     if (ok) {
       markCopied();
       return;
@@ -574,7 +574,7 @@ function ShareScreen({
       el.select();
       el.setSelectionRange(0, payPageUrl.length);
     }
-    toast("Long-press the link to copy");
+    toast("Link selected — long-press it, or Ctrl+C");
   };
 
   const share = async () => {
@@ -595,7 +595,7 @@ function ShareScreen({
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
     }
-    await copy();
+    copy();
   };
 
   const gotIt = item.status === "got-it";
@@ -634,7 +634,7 @@ function ShareScreen({
             <div className="mx-auto aspect-square w-full max-w-48 rounded-xl bg-paper-muted" />
           )}
           <p className="mt-3 text-center text-xs leading-relaxed text-haze">
-            Share the link. They tap CRED, try any other UPI app, or scan this QR.
+            Share the link. They tap CRED, pick any UPI app, or scan this QR.
           </p>
         </div>
       </div>
@@ -644,27 +644,28 @@ function ShareScreen({
           <Share2 />
           Share
         </Button>
-        <label className="sr-only" htmlFor="pay-link">
-          Pay link
-        </label>
-        <Input
-          id="pay-link"
-          ref={urlRef}
-          readOnly
-          value={payPageUrl}
-          data-testid="pay-link"
-          onFocus={(e) => e.currentTarget.select()}
-          onClick={(e) => e.currentTarget.select()}
-          className="h-11 bg-paper"
-        />
-        <Button
-          variant="secondary"
-          className="w-full bg-paper"
-          onClick={() => void copy()}
-          data-testid="copy-pay-link"
-        >
-          {copied ? "Copied" : "Copy pay link"}
-        </Button>
+        <div className="flex items-stretch gap-2">
+          <Input
+            id="pay-link"
+            ref={urlRef}
+            readOnly
+            value={payPageUrl}
+            aria-label="Pay link"
+            data-testid="pay-link"
+            onFocus={(e) => e.currentTarget.select()}
+            onClick={(e) => e.currentTarget.select()}
+            className="h-12 min-w-0 flex-1 bg-paper select-all"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-12 shrink-0 bg-paper px-5"
+            onClick={copy}
+            data-testid="copy-pay-link"
+          >
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
         <button
           type="button"
           onClick={() => onGotIt(gotIt ? "waiting" : "got-it")}

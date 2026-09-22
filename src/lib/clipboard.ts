@@ -1,29 +1,36 @@
-/** Copy text in contexts where the Clipboard API is blocked (iframes, in-app browsers). */
-export async function copyText(text: string): Promise<boolean> {
-  if (!text) return false;
+type SelectableField = {
+  focus(): void;
+  select(): void;
+  setSelectionRange(start: number, end: number): void;
+  value: string;
+};
 
-  try {
-    if (
-      typeof navigator !== "undefined" &&
-      typeof window !== "undefined" &&
-      window.isSecureContext &&
-      navigator.clipboard?.writeText
-    ) {
-      await navigator.clipboard.writeText(text);
-      return true;
+/**
+ * Copy must run in the same tick as the click. Brave (and some in-app browsers)
+ * hang on clipboard.writeText waiting for a permission, so we never await that
+ * first — execCommand on a selected field is the path that actually works.
+ */
+export function copyTextNow(text: string, field?: SelectableField | null): boolean {
+  if (!text || typeof document === "undefined") return false;
+
+  if (field) {
+    try {
+      field.focus();
+      field.select();
+      field.setSelectionRange(0, field.value.length);
+      if (document.execCommand("copy")) return true;
+    } catch {
+      /* try the textarea fallback */
     }
-  } catch {
-    /* fall through to execCommand */
   }
-
-  if (typeof document === "undefined") return false;
 
   const el = document.createElement("textarea");
   el.value = text;
   el.setAttribute("readonly", "");
   el.setAttribute("aria-hidden", "true");
+  // Brave ignores 1×1 opacity-0 nodes. Keep it in the layout, just tiny.
   el.style.cssText =
-    "position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0;";
+    "position:fixed;top:8px;left:8px;width:64px;height:24px;opacity:0.01;z-index:2147483647;";
   document.body.appendChild(el);
   el.focus();
   el.select();
@@ -36,4 +43,31 @@ export async function copyText(text: string): Promise<boolean> {
   }
   document.body.removeChild(el);
   return ok;
+}
+
+export async function copyText(
+  text: string,
+  field?: SelectableField | null,
+): Promise<boolean> {
+  if (copyTextNow(text, field)) return true;
+  if (!text) return false;
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      typeof window !== "undefined" &&
+      window.isSecureContext &&
+      navigator.clipboard?.writeText
+    ) {
+      await Promise.race([
+        navigator.clipboard.writeText(text),
+        new Promise<never>((_, reject) => {
+          window.setTimeout(() => reject(new Error("clipboard-timeout")), 400);
+        }),
+      ]);
+      return true;
+    }
+  } catch {
+    /* give up */
+  }
+  return false;
 }
