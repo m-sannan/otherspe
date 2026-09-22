@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { MerchantAvatar } from "@/components/brand-mark";
 import { UpiAppButtons } from "@/components/upi-app-buttons";
 import { qrDataUrl } from "@/lib/decode-qr";
 import { buildPaySearch } from "@/lib/upi-apps";
-import { buildUpiUri, formatInr, parseUpi } from "@/lib/upi";
+import { buildUpiUri, formatInrPretty, parseUpi } from "@/lib/upi";
 
 type PaySearch = {
   pa?: string;
@@ -81,58 +82,51 @@ function PayPage() {
 
   if (!payload || amount == null) {
     return (
-      <main className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center overflow-x-clip px-4 py-12 text-foreground">
-        <p className="font-display text-2xl font-medium">OthersPe</p>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+      <main className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center bg-lime px-6 text-ink">
+        <p className="font-display text-2xl font-semibold">OthersPe</p>
+        <p className="mt-3 text-sm leading-relaxed text-ink-muted">
           This payment link is missing a UPI ID or amount.
         </p>
-        <Link to="/" className="mt-6 text-sm text-primary underline-offset-4 hover:underline">
-          Create a new one
+        <Link to="/" className="mt-6 text-sm font-medium underline underline-offset-4">
+          Create a request
         </Link>
       </main>
     );
   }
 
   return (
-    <main className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-clip px-4 py-8 text-foreground sm:py-10">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        Pay for someone
-      </p>
-      <h1 className="mt-2 break-words font-display text-3xl font-medium tracking-tight">
-        {payload.name}
-      </h1>
-      <p className="mt-1 break-all font-mono text-sm text-muted-foreground">{payload.vpa}</p>
-      <p className="mt-6 font-display text-4xl font-medium tabular-nums">
-        ₹{formatInr(amount)}
-      </p>
+    <main className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col bg-lime px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] text-ink">
+      <p className="text-center text-xs font-medium text-ink-muted">Pay with OthersPe</p>
+      <div className="mt-6 flex flex-col items-center">
+        <MerchantAvatar name={payload.name} />
+        <h1 className="mt-3 break-words text-center text-xl font-semibold">{payload.name}</h1>
+        <p className="break-all text-center text-sm text-ink-muted">{payload.vpa}</p>
+        <p className="mt-6 font-display text-5xl font-semibold tabular-nums tracking-tight">
+          ₹{formatInrPretty(amount)}
+        </p>
+        {payload.note ? (
+          <p className="mt-2 text-center text-sm text-ink-muted">{payload.note}</p>
+        ) : null}
+      </div>
 
-      <section className="mt-8 rounded-xl bg-paper p-5 text-ink">
+      <section className="mt-6 rounded-[1.5rem] bg-paper p-5">
         {qrUrl ? (
           <img
             src={qrUrl}
             alt="Payment QR"
-            className="mx-auto aspect-square w-full max-w-52 rounded-md"
+            className="mx-auto aspect-square w-full max-w-48"
           />
         ) : (
-          <div className="mx-auto aspect-square w-full max-w-52 rounded-md bg-ink/5" />
+          <div className="mx-auto aspect-square w-full max-w-48 rounded-xl bg-paper-muted" />
         )}
-        <p className="mt-4 text-center text-sm leading-relaxed text-ink-muted">
-          Scan this inside CRED / GPay / PhonePe. Buttons below try to open
-          that app directly — they will not work from WhatsApp Pay.
+        <p className="mt-3 text-center text-xs leading-relaxed text-haze">
+          Scan this inside Google Pay, or tap a button below. Buttons will not work from WhatsApp’s in-app browser — open in Chrome.
         </p>
       </section>
 
-      <section className="mt-6 flex flex-col gap-3">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Open in
-        </p>
+      <section className="mt-5 flex flex-col gap-3">
         <UpiAppButtons upiUri={upiUri} />
       </section>
-
-      <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
-        If a button does nothing, this in-app browser is blocking app links.
-        Open the page in Chrome, or scan the QR.
-      </p>
     </main>
   );
 }

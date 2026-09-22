@@ -2,37 +2,42 @@
 @import "tw-animate-css";
 
 @theme {
-  --color-background: #0e0f0c;
-  --color-foreground: #f3f1ea;
-  --color-card: #171814;
-  --color-card-foreground: #f3f1ea;
-  --color-muted: #1f201b;
-  --color-muted-foreground: #9a9b93;
-  --color-secondary: #1f201b;
-  --color-secondary-foreground: #f3f1ea;
-  --color-primary: #e8eadf;
-  --color-primary-foreground: #14150f;
-  --color-accent: #22231e;
-  --color-accent-foreground: #f3f1ea;
-  --color-border: #2c2d27;
-  --color-input: #2c2d27;
-  --color-ring: #e8eadf;
-  --color-destructive: #c45c4a;
-  --color-paper: #f4f1e8;
-  --color-ink: #14150f;
-  --color-ink-muted: #5c5d55;
+  --color-lime: #c7e941;
+  --color-lime-deep: #b3d638;
+  --color-ink: #111111;
+  --color-ink-muted: #3d3d3d;
+  --color-paper: #ffffff;
+  --color-paper-muted: #ececec;
+  --color-haze: #6b6b6b;
+  --color-background: #c7e941;
+  --color-foreground: #111111;
+  --color-card: #ffffff;
+  --color-card-foreground: #111111;
+  --color-muted: #e7f2b8;
+  --color-muted-foreground: #3d3d3d;
+  --color-secondary: #111111;
+  --color-secondary-foreground: #ffffff;
+  --color-primary: #111111;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #111111;
+  --color-accent-foreground: #c7e941;
+  --color-border: #111111;
+  --color-input: #d4d4d4;
+  --color-ring: #111111;
+  --color-destructive: #b42318;
 
-  --radius: 0.75rem;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
+  --radius: 1.25rem;
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
 
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-quick: 150ms;
   --motion-fast: 250ms;
 }
@@ -47,8 +52,8 @@
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--color-lime);
+    color: var(--color-ink);
     font-family: var(--font-sans);
     max-width: 100%;
     min-height: 100dvh;
@@ -59,10 +64,6 @@
     max-width: 100%;
   }
 
-  /*
-    Chrome and Safari zoom the page when a focused field is under 16px.
-    That is the “keeps zooming in” feeling on a phone.
-  */
   input,
   select,
   textarea {
@@ -100,7 +101,6 @@
 .page-shell {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @media (prefers-reduced-motion: reduce) {

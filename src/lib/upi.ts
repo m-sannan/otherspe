@@ -184,12 +184,21 @@ export function buildQrPayload(input: {
   });
 }
 
+export function formatInrPretty(amount: number): string {
+  const paise = Math.round(amount * 100) % 100;
+  return amount.toLocaleString("en-IN", {
+    minimumFractionDigits: paise === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function formatInr(amount: number): string {
   return amount.toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
+
 
 export function parseAmount(value: string | null | undefined): number | null {
   if (!value) return null;
@@ -201,28 +210,18 @@ export function parseAmount(value: string | null | undefined): number | null {
 }
 
 export function buildShareText(input: {
-  friendName: string;
   payeeName: string;
-  vpa: string;
   amount: number;
   payPageUrl: string;
 }): string {
-  const who = input.friendName.trim();
-  const greeting = who ? `Hey ${who},` : "Hey,";
   return [
-    `${greeting} can you pay this for me?`,
+    `Pay ₹${formatInrPretty(input.amount)} to ${input.payeeName}`,
     "",
-    `${input.payeeName}`,
-    `${input.vpa}`,
-    `₹${formatInr(input.amount)}`,
-    "",
-    "Open this page, then tap CRED (or GPay / PhonePe):",
+    "Open this page, then tap Google Pay — or scan the QR.",
     input.payPageUrl,
-    "",
-    "Or open CRED → Scan QR, and scan the QR I sent.",
-    "Do not tap a upi:// link — WhatsApp opens its own Pay, and that fails.",
   ].join("\n");
 }
+
 
 function sanitize(input: string): string {
   return input

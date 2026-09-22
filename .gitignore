@@ -14,3 +14,12 @@ artifacts
 attachments
 .project_id
 .node_modules.lock
+.grok/skills
+.grok/references
+.grok/preview.pid
+.grok/status
+.grok/favicon-16.png
+.grok/favicon-32.png
+.grok/og-card.html
+.grok/og-pending
+AGENTS.md

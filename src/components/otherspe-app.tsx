@@ -1,749 +1,652 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type RefObject } from "react";
-import {
-  Check,
-  Copy,
-  Download,
-  ImagePlus,
-  Link2,
-  RotateCcw,
-  Share2,
-  Upload,
-} from "lucide-react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Check, ChevronLeft, IndianRupee, ScanLine, Share2 } from "lucide-react";
+import { format, isToday, isYesterday } from "date-fns";
 import { toast } from "sonner";
+import { AmountKeypad } from "@/components/amount-keypad";
+import { BrandMark, MerchantAvatar } from "@/components/brand-mark";
+import { QrScanner } from "@/components/qr-scanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { UpiAppButtons } from "@/components/upi-app-buttons";
+import { amountFromDigits, applyAmountKey, formatAmountDigits } from "@/lib/amount";
 import { decodeQrFromBlob, makeSampleQrBlob, qrDataUrl } from "@/lib/decode-qr";
+import {
+  isOnboarded,
+  loadRequests,
+  setOnboarded,
+  setRequestStatus,
+  upsertRequest,
+  type SavedRequest,
+} from "@/lib/history";
 import { buildPaySearch } from "@/lib/upi-apps";
 import {
   buildQrPayload,
   buildShareText,
   buildUpiUri,
-  formatInr,
+  formatInrPretty,
   isDemoPayload,
-  parseAmount,
   parseUpi,
+  rebuildBharatQr,
   type UpiPayload,
 } from "@/lib/upi";
 import { cn } from "@/lib/utils";
 
-type Status = "idle" | "reading" | "error";
-
-const SOURCE_LABEL: Record<UpiPayload["source"], string> = {
-  "upi-uri": "UPI intent",
-  "bharat-qr": "Bharat QR",
-  vpa: "UPI ID",
-  "http-wrapper": "Payment link",
-};
+type Screen = "boot" | "welcome" | "home" | "scan" | "amount" | "share" | "history" | "error";
 
 export function OthersPeApp() {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<Status>("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [screen, setScreen] = useState<Screen>("boot");
+  const [requests, setRequests] = useState<SavedRequest[]>([]);
   const [payload, setPayload] = useState<UpiPayload | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [amountInput, setAmountInput] = useState("");
-  const [friendName, setFriendName] = useState("");
+  const [amountDigits, setAmountDigits] = useState("");
   const [note, setNote] = useState("");
-  const [pasteValue, setPasteValue] = useState("");
-  const [dragging, setDragging] = useState(false);
-  const [copied, setCopied] = useState<"message" | "link" | "qr" | "page" | null>(null);
-  const [payQrUrl, setPayQrUrl] = useState<string | null>(null);
-
-  const amount = parseAmount(amountInput);
-
-  const txnRef = useMemo(() => {
-    if (!payload || amount == null) return "";
-    return `OP${Date.now().toString(36).toUpperCase()}`;
-  }, [payload, amount]);
-
-  const upiUri = useMemo(() => {
-    if (!payload || amount == null) return "";
-    return buildUpiUri({
-      vpa: payload.vpa,
-      name: payload.name,
-      amount,
-      note: note.trim() || (friendName.trim() ? `Paid for ${friendName.trim()}` : payload.note),
-      mcc: payload.mcc,
-      txnRef,
-    });
-  }, [payload, amount, note, friendName, txnRef]);
-
-  const qrPayload = useMemo(() => {
-    if (!payload || amount == null) return "";
-    return buildQrPayload({
-      payload,
-      amount,
-      note: note.trim() || (friendName.trim() ? `Paid for ${friendName.trim()}` : payload.note),
-      txnRef,
-    });
-  }, [payload, amount, note, friendName, txnRef]);
-
-  const payPageUrl = useMemo(() => {
-    if (!payload || amount == null) return "";
-    const query = buildPaySearch({
-      vpa: payload.vpa,
-      name: payload.name,
-      amount,
-      note: note.trim() || (friendName.trim() ? `Paid for ${friendName.trim()}` : payload.note),
-      mcc: payload.mcc,
-      txnRef,
-    });
-    const origin = typeof window === "undefined" ? "" : window.location.origin;
-    return origin ? `${origin}/pay?${query}` : `/pay?${query}`;
-  }, [payload, amount, note, friendName, txnRef]);
-
-  const message = useMemo(() => {
-    if (!payload || amount == null || !payPageUrl) return "";
-    return buildShareText({
-      friendName,
-      payeeName: payload.name,
-      vpa: payload.vpa,
-      amount,
-      payPageUrl,
-    });
-  }, [payload, amount, friendName, payPageUrl]);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [txnRef, setTxnRef] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; body: string } | null>(null);
 
   useEffect(() => {
-    if (!qrPayload) {
-      setPayQrUrl(null);
-      return;
+    setRequests(loadRequests());
+    setScreen(isOnboarded() ? "home" : "welcome");
+  }, []);
+
+  const startScan = () => setScreen("scan");
+
+  const applyRaw = useCallback((raw: string) => {
+    const result = parseUpi(raw);
+    if (!result.ok) {
+      toast(result.error);
+      return false;
     }
+    const next = result.payload;
+    setPayload(next);
+    setAmountDigits(next.amount != null ? String(next.amount) : "");
+    setNote(next.note);
+    setNoteOpen(false);
+    setTxnRef(`OP${Date.now().toString(36).toUpperCase()}`);
+    setScreen("amount");
+    return true;
+  }, []);
+
+  const onSample = async () => {
+    try {
+      const blob = await makeSampleQrBlob();
+      const raw = await decodeQrFromBlob(blob);
+      if (raw) applyRaw(raw);
+    } catch {
+      setError({
+        title: "Couldn't build the sample",
+        body: "Upload a real UPI QR instead.",
+      });
+      setScreen("error");
+    }
+  };
+
+  const amount = amountFromDigits(amountDigits);
+  const active = requests.find((r) => r.id === activeId) ?? null;
+
+  const saveRequest = () => {
+    if (!payload || amount == null) return;
+    const item: SavedRequest = {
+      id: txnRef,
+      createdAt: Date.now(),
+      vpa: payload.vpa,
+      name: payload.name,
+      amount,
+      note: note.trim(),
+      mcc: payload.mcc,
+      txnRef,
+      source: payload.source,
+      raw: payload.raw,
+      status: "waiting",
+    };
+    setRequests(upsertRequest(item));
+    setActiveId(item.id);
+    setScreen("share");
+  };
+
+  if (screen === "boot") {
+    return (
+      <Phone tone="paper">
+        <div className="flex min-h-dvh flex-col items-center justify-center">
+          <BrandMark className="size-20 text-lime" />
+        </div>
+      </Phone>
+    );
+  }
+
+  if (screen === "welcome") {
+    return (
+      <Phone tone="lime">
+        <WelcomeScreen
+          onStart={() => {
+            setOnboarded();
+            setScreen("home");
+          }}
+        />
+      </Phone>
+    );
+  }
+
+  if (screen === "scan") {
+    return (
+      <Phone tone="ink">
+        <QrScanner
+          onRaw={applyRaw}
+          onClose={() => setScreen("home")}
+          onFileError={(body) => {
+            setError({ title: "Couldn't read that QR", body });
+            setScreen("error");
+          }}
+          onSample={() => void onSample()}
+        />
+      </Phone>
+    );
+  }
+
+  if (screen === "amount" && payload) {
+    return (
+      <Phone tone="lime">
+        <AmountScreen
+          payload={payload}
+          amountDigits={amountDigits}
+          note={note}
+          noteOpen={noteOpen}
+          amount={amount}
+          onBack={() => setScreen("home")}
+          onKey={(key) => setAmountDigits((cur) => applyAmountKey(cur, key))}
+          onNote={setNote}
+          onToggleNote={() => setNoteOpen((v) => !v)}
+          onRequest={saveRequest}
+        />
+      </Phone>
+    );
+  }
+
+  if (screen === "share" && active) {
+    return (
+      <Phone tone="lime">
+        <ShareScreen
+          item={active}
+          payload={payload}
+          onBack={() => setScreen("home")}
+          onGotIt={(status) => {
+            setRequests(setRequestStatus(active.id, status));
+          }}
+        />
+      </Phone>
+    );
+  }
+
+  if (screen === "history") {
+    return (
+      <Phone tone="paper">
+        <HistoryScreen
+          items={requests}
+          onBack={() => setScreen("home")}
+          onOpen={(id) => {
+            setActiveId(id);
+            setScreen("share");
+          }}
+        />
+      </Phone>
+    );
+  }
+
+  if (screen === "error" && error) {
+    return (
+      <Phone tone="lime">
+        <ErrorScreen
+          title={error.title}
+          body={error.body}
+          onRetry={() => setScreen("scan")}
+        />
+      </Phone>
+    );
+  }
+
+  return (
+    <Phone tone="paper">
+      <HomeScreen
+        items={requests}
+        onScan={startScan}
+        onSeeAll={() => setScreen("history")}
+        onOpen={(id) => {
+          setActiveId(id);
+          setScreen("share");
+        }}
+      />
+    </Phone>
+  );
+}
+
+function Phone({
+  tone,
+  children,
+}: {
+  tone: "lime" | "paper" | "ink";
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "min-h-dvh w-full",
+        tone === "lime" && "bg-lime text-ink",
+        tone === "paper" && "bg-paper text-ink",
+        tone === "ink" && "bg-ink text-paper",
+      )}
+    >
+      <div className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-clip">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function WelcomeScreen({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]">
+      <BrandMark className="size-12 text-ink" />
+      <div className="flex flex-1 flex-col justify-end pb-10">
+        <h1 className="font-display text-[2.75rem] font-semibold leading-[1.05] tracking-tight">
+          Scan.
+          <br />
+          Request.
+          <br />
+          Get Paid.
+        </h1>
+        <p className="mt-4 max-w-[16rem] text-base leading-relaxed text-ink-muted">
+          Request a payment from anyone with a UPI app. Everything stays on
+          this phone — no account, no server.
+        </p>
+      </div>
+      <Button size="lg" className="w-full" onClick={onStart} data-testid="get-started">
+        Get Started
+      </Button>
+    </div>
+  );
+}
+
+function HomeScreen({
+  items,
+  onScan,
+  onSeeAll,
+  onOpen,
+}: {
+  items: SavedRequest[];
+  onScan: () => void;
+  onSeeAll: () => void;
+  onOpen: (id: string) => void;
+}) {
+  const preview = items.slice(0, 4);
+  return (
+    <div className="flex min-h-dvh flex-col bg-paper">
+      <header className="bg-lime px-6 pb-10 pt-[max(2.5rem,calc(env(safe-area-inset-top)+1.5rem))]">
+        <h1 className="font-display text-[2.15rem] font-semibold leading-tight tracking-tight">
+          Welcome to OthersPe!
+        </h1>
+        <p className="mt-2 text-right text-sm text-ink-muted">Stuck? Let others pay.</p>
+      </header>
+      <section className="flex flex-1 flex-col px-6 pt-6">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">History</h2>
+          {items.length > 0 ? (
+            <button type="button" onClick={onSeeAll} className="text-sm text-haze">
+              See All
+            </button>
+          ) : null}
+        </div>
+        {preview.length === 0 ? (
+          <p className="mt-6 max-w-xs text-sm leading-relaxed text-haze">
+            Your recent requests will show up here. They stay on this phone —
+            unlike a server, we never see them.
+          </p>
+        ) : (
+          <ul className="divide-y divide-ink/10">
+            {preview.map((item) => (
+              <li key={item.id}>
+                <HistoryRow item={item} onOpen={() => onOpen(item.id)} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <div className="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4">
+        <Button size="lg" className="w-full" onClick={onScan} data-testid="scan-and-request">
+          <ScanLine className="size-5" />
+          Scan and Request
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AmountScreen({
+  payload,
+  amountDigits,
+  note,
+  noteOpen,
+  amount,
+  onBack,
+  onKey,
+  onNote,
+  onToggleNote,
+  onRequest,
+}: {
+  payload: UpiPayload;
+  amountDigits: string;
+  note: string;
+  noteOpen: boolean;
+  amount: number | null;
+  onBack: () => void;
+  onKey: (key: string) => void;
+  onNote: (value: string) => void;
+  onToggleNote: () => void;
+  onRequest: () => void;
+}) {
+  const demo = isDemoPayload(payload);
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <div className="flex items-center px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <BackButton onClick={onBack} />
+      </div>
+      <div className="flex flex-1 flex-col items-center px-6 pt-2">
+        <MerchantAvatar name={payload.name} />
+        <p className="mt-3 flex items-center gap-1 text-lg font-semibold">
+          {payload.name}
+          <span className="inline-flex size-4 items-center justify-center rounded-full bg-ink text-lime">
+            <Check className="size-2.5" />
+          </span>
+        </p>
+        <p className="break-all text-sm text-ink-muted">{payload.vpa}</p>
+        <p className="mt-8 font-display text-6xl font-semibold tabular-nums tracking-tight" data-testid="amount-display">
+          ₹{formatAmountDigits(amountDigits)}
+        </p>
+        {demo ? (
+          <p className="mt-3 max-w-xs text-center text-xs leading-relaxed text-ink-muted">
+            Sample UPI ID — a real payment will not go through. Use your own QR to test.
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={onToggleNote}
+          className="mt-4 text-sm font-medium text-ink-muted underline-offset-4 hover:underline"
+        >
+          {note.trim() ? note.trim() : "Add a note"}
+        </button>
+        {noteOpen ? (
+          <Input
+            value={note}
+            onChange={(e) => onNote(e.target.value)}
+            placeholder="Pay for groceries"
+            className="mt-3 max-w-xs bg-paper/70"
+            autoComplete="off"
+          />
+        ) : null}
+      </div>
+      <div className="rounded-t-[1.75rem] bg-paper-muted pt-3">
+        <div className="px-3">
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={amount == null}
+            onClick={onRequest}
+            data-testid="request-payment"
+          >
+            {amount == null ? "Enter Amount" : "Request Payment"}
+          </Button>
+        </div>
+        <AmountKeypad onKey={onKey} />
+      </div>
+    </div>
+  );
+}
+
+function ShareScreen({
+  item,
+  payload,
+  onBack,
+  onGotIt,
+}: {
+  item: SavedRequest;
+  payload: UpiPayload | null;
+  onBack: () => void;
+  onGotIt: (status: SavedRequest["status"]) => void;
+}) {
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const payPageUrl = `${origin}/pay?${buildPaySearch({
+    vpa: item.vpa,
+    name: item.name,
+    amount: item.amount,
+    note: item.note,
+    mcc: item.mcc,
+    txnRef: item.txnRef,
+  })}`;
+  const shareText = buildShareText({
+    payeeName: item.name,
+    amount: item.amount,
+    payPageUrl,
+  });
+  const qrPayload =
+    item.source === "bharat-qr" && item.raw.startsWith("0002")
+      ? rebuildBharatQr(item.raw, item.amount)
+      : payload
+        ? buildQrPayload({
+            payload,
+            amount: item.amount,
+            note: item.note,
+            txnRef: item.txnRef,
+          })
+        : buildUpiUri({
+            vpa: item.vpa,
+            name: item.name,
+            amount: item.amount,
+            note: item.note,
+            mcc: item.mcc,
+            txnRef: item.txnRef,
+          });
+
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  useEffect(() => {
     let cancelled = false;
     void qrDataUrl(qrPayload).then((url) => {
-      if (!cancelled) setPayQrUrl(url);
+      if (!cancelled) setQrUrl(url);
     });
     return () => {
       cancelled = true;
     };
   }, [qrPayload]);
 
-  const applyPayload = useCallback((next: UpiPayload, preview?: string) => {
-    setPayload(next);
-    setError(null);
-    setStatus("idle");
-    setAmountInput(next.amount != null ? String(next.amount) : "");
-    setNote(next.note);
-    if (preview) setPreviewUrl(preview);
-  }, []);
-
-  const handleRaw = useCallback(
-    (raw: string, preview?: string) => {
-      const result = parseUpi(raw);
-      if (!result.ok) {
-        setStatus("error");
-        setError(result.error);
-        setPayload(null);
-        return;
-      }
-      applyPayload(result.payload, preview);
-    },
-    [applyPayload],
-  );
-
-  const handleBlob = useCallback(
-    async (blob: Blob) => {
-      setStatus("reading");
-      setError(null);
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return url;
-      });
-      try {
-        const raw = await decodeQrFromBlob(blob);
-        if (!raw) {
-          setStatus("error");
-          setError(
-            "Could not read a QR in that image. Try a tighter crop, or paste the upi:// link.",
-          );
-          setPayload(null);
+  const share = async () => {
+    const title = `Pay ₹${formatInrPretty(item.amount)} to ${item.name}`;
+    try {
+      if (qrUrl && navigator.share && navigator.canShare) {
+        const blob = await (await fetch(qrUrl)).blob();
+        const file = new File([blob], "otherspe-pay.png", { type: "image/png" });
+        if (navigator.canShare({ files: [file], url: payPageUrl })) {
+          await navigator.share({ title, text: shareText, url: payPageUrl, files: [file] });
           return;
         }
-        handleRaw(raw, url);
-      } catch {
-        setStatus("error");
-        setError("Could not open that image.");
-        setPayload(null);
       }
-    },
-    [handleRaw],
-  );
-
-  useEffect(() => {
-    const onPaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items;
-      if (!items) return;
-      for (const item of items) {
-        if (item.type.startsWith("image/")) {
-          const file = item.getAsFile();
-          if (file) {
-            event.preventDefault();
-            void handleBlob(file);
-            return;
-          }
-        }
+      if (navigator.share) {
+        await navigator.share({ title, text: shareText, url: payPageUrl });
+        return;
       }
-      const text = event.clipboardData?.getData("text");
-      if (
-        text &&
-        (text.includes("upi://") || text.includes("@") || text.startsWith("0002")) &&
-        !(event.target instanceof HTMLInputElement) &&
-        !(event.target instanceof HTMLTextAreaElement)
-      ) {
-        event.preventDefault();
-        handleRaw(text);
-      }
-    };
-    window.addEventListener("paste", onPaste);
-    return () => window.removeEventListener("paste", onPaste);
-  }, [handleBlob, handleRaw]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
-  const reset = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPayload(null);
-    setPreviewUrl(null);
-    setAmountInput("");
-    setFriendName("");
-    setNote("");
-    setPasteValue("");
-    setError(null);
-    setStatus("idle");
-    setCopied(null);
-    setPayQrUrl(null);
-  };
-
-  const copyText = async (value: string, kind: "message" | "link" | "page") => {
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+    }
     try {
-      await navigator.clipboard.writeText(value);
-      setCopied(kind);
-      toast(
-        kind === "message"
-          ? "Note copied"
-          : kind === "page"
-            ? "Pay page copied"
-            : "UPI link copied",
-      );
-      window.setTimeout(() => setCopied(null), 1600);
+      await navigator.clipboard.writeText(payPageUrl);
+      toast("Pay link copied");
     } catch {
-      toast("Could not copy. Select the text instead.");
+      toast("Copy the link below");
     }
   };
 
-  const onDrop = (event: DragEvent) => {
-    event.preventDefault();
-    setDragging(false);
-    const file = event.dataTransfer.files[0];
-    if (file) void handleBlob(file);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(payPageUrl);
+      toast("Pay link copied");
+    } catch {
+      toast("Could not copy");
+    }
   };
 
+  const gotIt = item.status === "got-it";
+
   return (
-    <div className="page-shell min-h-dvh overflow-x-clip bg-background text-foreground">
-      <div className="mx-auto flex w-full max-w-3xl flex-col px-4 pb-16 pt-6 sm:px-6 sm:pt-12">
-        <header className="mb-8 flex flex-col gap-3 sm:mb-10 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="min-w-0">
-            <p className="font-display text-3xl font-medium tracking-tight text-foreground">
-              OthersPe
-            </p>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Drop a UPI QR. Share a page with CRED / GPay / PhonePe buttons,
-              or a QR they scan. Do not send a upi:// link on WhatsApp — it
-              opens WhatsApp Pay and dies.
-            </p>
-          </div>
-          {payload ? (
-            <Button variant="ghost" onClick={reset} className="h-11 shrink-0 self-start">
-              <RotateCcw />
-              New QR
-            </Button>
-          ) : null}
-        </header>
-
-        {!payload ? (
-          <IdlePanel
-            status={status}
-            error={error}
-            dragging={dragging}
-            pasteValue={pasteValue}
-            fileRef={fileRef}
-            onPasteValue={setPasteValue}
-            onBrowse={() => fileRef.current?.click()}
-            onFile={(file) => void handleBlob(file)}
-            onSubmitPaste={() => handleRaw(pasteValue)}
-            onDragOver={() => setDragging(true)}
-            onDragLeave={() => setDragging(false)}
-            onDrop={onDrop}
-            onSample={async () => {
-              setStatus("reading");
-              try {
-                const blob = await makeSampleQrBlob();
-                await handleBlob(blob);
-              } catch {
-                setStatus("error");
-                setError("Could not build the sample QR.");
-              }
-            }}
-          />
-        ) : (
-          <Composer
-            payload={payload}
-            previewUrl={previewUrl}
-            amountInput={amountInput}
-            friendName={friendName}
-            note={note}
-            amount={amount}
-            message={message}
-            upiUri={upiUri}
-            payPageUrl={payPageUrl}
-            payQrUrl={payQrUrl}
-            isDemo={isDemoPayload(payload)}
-            copied={copied}
-            onAmount={setAmountInput}
-            onFriend={setFriendName}
-            onNote={setNote}
-            onCopyMessage={() => void copyText(message, "message")}
-            onCopyPage={() => void copyText(payPageUrl, "page")}
-            onCopyQr={async () => {
-              if (!payQrUrl) return;
-              try {
-                const blob = await (await fetch(payQrUrl)).blob();
-                await navigator.clipboard.write([
-                  new ClipboardItem({ [blob.type]: blob }),
-                ]);
-                setCopied("qr");
-                toast("QR copied — paste it into WhatsApp");
-                window.setTimeout(() => setCopied(null), 1600);
-              } catch {
-                toast("Could not copy the QR. Save it instead.");
-              }
-            }}
-            onShareQr={async () => {
-              if (!payQrUrl) return;
-              try {
-                const blob = await (await fetch(payQrUrl)).blob();
-                const file = new File([blob], "otherspe-pay.png", {
-                  type: blob.type || "image/png",
-                });
-                if (navigator.canShare?.({ files: [file] })) {
-                  await navigator.share({
-                    files: [file],
-                    text: message,
-                    title: "Pay this for me",
-                  });
-                  return;
-                }
-                toast("This browser can't attach a QR. Save it and send the image.");
-              } catch {
-                toast("Share cancelled.");
-              }
-            }}
-          />
-        )}
-
-        <p className="mt-12 text-xs leading-relaxed text-muted-foreground">
-          WhatsApp intercepts upi:// and opens WhatsApp Pay — that is the
-          “something went wrong.” Send the pay page (https) or the QR instead.
-          We still cannot confirm the transfer.
+    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <div className="-mx-4 flex items-center pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <BackButton onClick={onBack} />
+      </div>
+      <div className="flex flex-1 flex-col items-center pt-2">
+        <MerchantAvatar name={item.name} />
+        <p className="mt-3 text-lg font-semibold">{item.name}</p>
+        <p className="break-all text-sm text-ink-muted">{item.vpa}</p>
+        <p className="mt-5 font-display text-5xl font-semibold tabular-nums">
+          ₹{formatInrPretty(item.amount)}
         </p>
+        {item.note ? <p className="mt-2 text-sm text-ink-muted">{item.note}</p> : null}
+
+        <div className="mt-6 w-full rounded-[1.5rem] bg-paper p-5">
+          {qrUrl ? (
+            <img
+              src={qrUrl}
+              alt="Payment QR"
+              data-testid="pay-qr"
+              className="mx-auto aspect-square w-full max-w-48"
+            />
+          ) : (
+            <div className="mx-auto aspect-square w-full max-w-48 rounded-xl bg-paper-muted" />
+          )}
+          <p className="mt-3 text-center text-xs leading-relaxed text-haze">
+            Share the link. Your friend opens OthersPe, then taps Google Pay or scans this QR.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 flex flex-col gap-2">
+        <Button size="lg" className="w-full" onClick={() => void share()} data-testid="share-request">
+          <Share2 />
+          Share
+        </Button>
+        <Button variant="secondary" className="w-full bg-paper" onClick={() => void copy()}>
+          Copy pay link
+        </Button>
+        <button
+          type="button"
+          onClick={() => onGotIt(gotIt ? "waiting" : "got-it")}
+          className="mt-2 flex h-12 items-center justify-center gap-2 text-sm font-medium text-ink-muted"
+          data-testid="mark-got-it"
+        >
+          <span
+            className={cn(
+              "flex size-5 items-center justify-center rounded-full border border-ink",
+              gotIt && "bg-ink text-lime",
+            )}
+          >
+            {gotIt ? <Check className="size-3" /> : null}
+          </span>
+          {gotIt ? "Marked as received" : "I got the payment"}
+        </button>
       </div>
     </div>
   );
 }
 
-function IdlePanel({
-  status,
-  error,
-  dragging,
-  pasteValue,
-  fileRef,
-  onPasteValue,
-  onBrowse,
-  onFile,
-  onSubmitPaste,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  onSample,
+function HistoryScreen({
+  items,
+  onBack,
+  onOpen,
 }: {
-  status: Status;
-  error: string | null;
-  dragging: boolean;
-  pasteValue: string;
-  fileRef: RefObject<HTMLInputElement | null>;
-  onPasteValue: (value: string) => void;
-  onBrowse: () => void;
-  onFile: (file: File) => void;
-  onSubmitPaste: () => void;
-  onDragOver: () => void;
-  onDragLeave: () => void;
-  onDrop: (event: DragEvent) => void;
-  onSample: () => void;
+  items: SavedRequest[];
+  onBack: () => void;
+  onOpen: (id: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-6">
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        aria-label="Upload UPI QR image"
-        className="sr-only"
-        data-testid="qr-file"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) onFile(file);
-          event.target.value = "";
-        }}
-      />
-
-      <button
-        type="button"
-        onClick={onBrowse}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          onDragOver();
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          onDragOver();
-        }}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        className={cn(
-          "flex min-h-48 w-full flex-col items-center justify-center rounded-xl border border-dashed px-5 py-8 text-center transition-[border-color,background-color] duration-[var(--motion-fast)] ease-[var(--ease-out)] sm:min-h-56 sm:px-6 sm:py-10",
-          dragging
-            ? "border-primary bg-muted"
-            : "border-border bg-card hover:border-primary/50",
-        )}
-      >
-        <span className="mb-4 flex size-12 items-center justify-center rounded-lg bg-muted text-foreground">
-          {status === "reading" ? (
-            <Upload className="size-5 animate-pulse" />
-          ) : (
-            <ImagePlus className="size-5" />
-          )}
-        </span>
-        <span className="text-base font-medium text-foreground">
-          {status === "reading" ? "Reading QR…" : "Drop a UPI QR here"}
-        </span>
-        <span className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-          Screenshot, camera roll, or paste an image. Personal UPI QRs are the
-          reliable ₹1 test.
-        </span>
-      </button>
-
-      {error ? (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-foreground"
-        >
-          {error}
+    <div className="flex min-h-dvh flex-col bg-paper">
+      <header className="flex items-center gap-1 px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <BackButton onClick={onBack} />
+        <h1 className="flex-1 pr-12 text-center text-base font-semibold">History</h1>
+      </header>
+      <p className="px-6 text-center text-xs text-haze">Payment History</p>
+      {items.length === 0 ? (
+        <p className="px-6 pt-12 text-sm leading-relaxed text-haze">
+          No requests yet. Scan a UPI QR to create one.
         </p>
-      ) : null}
+      ) : (
+        <ul className="mt-4 divide-y divide-ink/10 px-6" data-testid="history-list">
+          {items.map((item) => (
+            <li key={item.id}>
+              <HistoryRow item={item} onOpen={() => onOpen(item.id)} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
-      <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-        <Label htmlFor="paste-upi">Or paste a UPI link / ID</Label>
-        <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row">
-          <Input
-            id="paste-upi"
-            value={pasteValue}
-            onChange={(e) => onPasteValue(e.target.value)}
-            placeholder="name@oksbi or upi://pay?…"
-            autoComplete="off"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onSubmitPaste();
-            }}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            className="h-12 w-full sm:w-28"
-            onClick={onSubmitPaste}
-            disabled={!pasteValue.trim()}
-          >
-            Read
-          </Button>
-        </div>
+function HistoryRow({ item, onOpen }: { item: SavedRequest; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center gap-3 py-3.5 text-left"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-ink">
+        <IndianRupee className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium">{item.name}</span>
+        <span className="block text-xs text-haze">
+          {formatWhen(item.createdAt)}
+          {item.status === "got-it" ? " · Got it" : " · Waiting"}
+        </span>
+      </span>
+      <span className="shrink-0 font-medium tabular-nums">₹{formatInrPretty(item.amount)}</span>
+    </button>
+  );
+}
+
+function ErrorScreen({
+  title,
+  body,
+  onRetry,
+}: {
+  title: string;
+  body: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <BrandMark className="size-16 text-ink" />
+        <h1 className="mt-8 font-display text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink-muted">{body}</p>
       </div>
-
-      <Button type="button" variant="outline" onClick={onSample}>
-        Try a sample QR (will not actually pay)
+      <Button size="lg" className="w-full" onClick={onRetry}>
+        Retry
       </Button>
     </div>
   );
 }
 
-function Composer({
-  payload,
-  previewUrl,
-  amountInput,
-  friendName,
-  note,
-  amount,
-  message,
-  upiUri,
-  payPageUrl,
-  payQrUrl,
-  isDemo,
-  copied,
-  onAmount,
-  onFriend,
-  onNote,
-  onCopyMessage,
-  onCopyPage,
-  onCopyQr,
-  onShareQr,
-}: {
-  payload: UpiPayload;
-  previewUrl: string | null;
-  amountInput: string;
-  friendName: string;
-  note: string;
-  amount: number | null;
-  message: string;
-  upiUri: string;
-  payPageUrl: string;
-  payQrUrl: string | null;
-  isDemo: boolean;
-  copied: "message" | "link" | "qr" | "page" | null;
-  onAmount: (value: string) => void;
-  onFriend: (value: string) => void;
-  onNote: (value: string) => void;
-  onCopyMessage: () => void;
-  onCopyPage: () => void;
-  onCopyQr: () => void;
-  onShareQr: () => void;
-}) {
-  const whatsappHref =
-    amount != null
-      ? `https://wa.me/?text=${encodeURIComponent(message)}`
-      : undefined;
-
+function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex min-w-0 items-start gap-4">
-          {previewUrl ? (
-            <img
-              src={previewUrl}
-              alt="Uploaded QR"
-              className="size-16 shrink-0 rounded-md border border-border bg-paper object-cover p-1"
-            />
-          ) : (
-            <div className="flex size-16 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
-              <Link2 className="size-5 text-muted-foreground" />
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {SOURCE_LABEL[payload.source]}
-            </p>
-            <p className="mt-1 break-words font-display text-xl font-medium text-foreground">
-              {payload.name}
-            </p>
-            <p className="mt-0.5 break-all font-mono text-sm text-muted-foreground">
-              {payload.vpa}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {isDemo ? (
-        <p
-          role="status"
-          className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm leading-relaxed text-foreground"
-        >
-          This sample UPI ID does not exist. Google Pay will show “Payment
-          couldn't be completed.” Drop a real QR — your own personal UPI
-          is the clean ₹1 test.
-        </p>
-      ) : null}
-
-      <section className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="amount">Amount (₹)</Label>
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-              ₹
-            </span>
-            <Input
-              id="amount"
-              inputMode="decimal"
-              enterKeyHint="done"
-              autoComplete="off"
-              value={amountInput}
-              onChange={(e) => onAmount(e.target.value)}
-              placeholder="0.00"
-              className="pl-7 font-mono text-base tabular-nums"
-              data-testid="amount"
-            />
-          </div>
-          {payload.amount != null ? (
-            <p className="text-xs text-muted-foreground">
-              QR had ₹{formatInr(payload.amount)}. Change it if you want.
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Static QR — type what they should pay.
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="friend">Friend's name (optional)</Label>
-          <Input
-            id="friend"
-            value={friendName}
-            onChange={(e) => onFriend(e.target.value)}
-            placeholder="Rohit"
-            data-testid="friend"
-          />
-        </div>
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="note">Note on the payment (optional)</Label>
-          <Input
-            id="note"
-            value={note}
-            onChange={(e) => onNote(e.target.value)}
-            placeholder="Dinner / groceries"
-          />
-        </div>
-      </section>
-
-      <section className="rounded-xl bg-paper p-5 text-ink sm:p-6">
-        <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">
-          Scan this inside CRED
-        </p>
-        {amount == null ? (
-          <p className="mt-4 text-sm leading-relaxed text-ink-muted">
-            Add an amount to generate the payment QR.
-          </p>
-        ) : (
-          <div className="mt-4 flex flex-col items-center gap-4">
-            {payQrUrl ? (
-              <img
-                src={payQrUrl}
-                alt="Payment QR"
-                data-testid="pay-qr"
-                className="aspect-square w-full max-w-52 rounded-md sm:max-w-56"
-              />
-            ) : (
-              <div className="aspect-square w-full max-w-52 rounded-md bg-ink/5 sm:max-w-56" />
-            )}
-            <p className="max-w-sm text-center text-sm leading-relaxed text-ink-muted">
-              Scan still works. Do not send a upi:// link on WhatsApp — it
-              opens WhatsApp Pay.
-            </p>
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Open in a specific app
-        </p>
-        <p className="mt-2 mb-3 text-sm leading-relaxed text-muted-foreground">
-          Use these on this phone. Your friend gets the same buttons on the
-          pay page.
-        </p>
-        <UpiAppButtons upiUri={upiUri} disabled={amount == null} />
-      </section>
-
-      <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Message to send
-        </p>
-        {amount == null ? (
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            Add an amount to generate the note.
-          </p>
-        ) : (
-          <pre
-            data-testid="share-message"
-            className="mt-3 max-w-full overflow-x-auto whitespace-pre-wrap break-all font-sans text-sm leading-relaxed text-foreground"
-          >
-            {message}
-          </pre>
-        )}
-      </section>
-
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          className="col-span-2 h-12 whitespace-normal"
-          disabled={amount == null || !payQrUrl}
-          onClick={onShareQr}
-        >
-          <Share2 />
-          Share QR
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="h-12 whitespace-normal"
-          disabled={amount == null || !payQrUrl}
-          onClick={onCopyQr}
-        >
-          {copied === "qr" ? <Check /> : <Copy />}
-          Copy QR
-        </Button>
-        {payQrUrl ? (
-          <Button type="button" variant="secondary" className="h-12 whitespace-normal" asChild>
-            <a href={payQrUrl} download="otherspe-pay.png">
-              <Download />
-              Save QR
-            </a>
-          </Button>
-        ) : (
-          <Button type="button" variant="secondary" className="h-12 whitespace-normal" disabled>
-            <Download />
-            Save QR
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="secondary"
-          className="h-12 whitespace-normal"
-          disabled={amount == null}
-          onClick={onCopyMessage}
-        >
-          {copied === "message" ? <Check /> : <Copy />}
-          Copy note
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-12 whitespace-normal"
-          disabled={!whatsappHref}
-          asChild={Boolean(whatsappHref)}
-        >
-          {whatsappHref ? (
-            <a href={whatsappHref} target="_blank" rel="noreferrer">
-              WhatsApp
-            </a>
-          ) : (
-            <span>WhatsApp</span>
-          )}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className="col-span-2 h-12 whitespace-normal"
-          disabled={!payPageUrl}
-          onClick={onCopyPage}
-        >
-          {copied === "page" ? <Check /> : <Link2 />}
-          Copy pay page
-        </Button>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Back"
+      className="flex size-11 items-center justify-center rounded-full"
+    >
+      <ChevronLeft className="size-6" />
+    </button>
   );
+}
+
+function formatWhen(ts: number): string {
+  const d = new Date(ts);
+  const time = format(d, "h:mmaaa").toLowerCase();
+  if (isToday(d)) return `Today, ${time}`;
+  if (isYesterday(d)) return `Yesterday, ${time}`;
+  return `${format(d, "MMMM d")}, ${time}`;
 }

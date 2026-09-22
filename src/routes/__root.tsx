@@ -17,9 +17,9 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       {
         name: "description",
-        content: "Drop a UPI QR. Get the message your friend taps to pay.",
+        content: "Scan a UPI QR, set an amount, share a pay page. Your friend taps Google Pay.",
       },
-      { name: "theme-color", content: "#0e0f0c" },
+      { name: "theme-color", content: "#c7e941" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "format-detection", content: "telephone=no" },
     ],
@@ -39,7 +39,7 @@ export const Route = createRootRoute({
       },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap",
       },
     ],
   }),
@@ -53,13 +53,13 @@ export const Route = createRootRoute({
         <AuthProvider>
           <Outlet />
           <Toaster
-            theme="dark"
+            theme="light"
             position="bottom-center"
             toastOptions={{
               style: {
-                background: "#171814",
-                border: "1px solid #2c2d27",
-                color: "#f3f1ea",
+                background: "#111111",
+                border: "none",
+                color: "#c7e941",
               },
             }}
           />

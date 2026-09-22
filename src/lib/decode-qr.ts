@@ -4,6 +4,14 @@ import { SAMPLE_UPI_URI } from "./upi";
 
 const MAX_EDGE = 1400;
 
+export function decodeQrFromImageData(imageData: ImageData): string | null {
+  const code = jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: "attemptBoth",
+  });
+  const data = code?.data?.trim();
+  return data || null;
+}
+
 export async function decodeQrFromBlob(blob: Blob): Promise<string | null> {
   const bitmap = await createImageBitmap(blob);
   try {
@@ -29,7 +37,7 @@ export async function qrDataUrl(payload: string): Promise<string> {
     width: 512,
     margin: 2,
     errorCorrectionLevel: "M",
-    color: { dark: "#14150f", light: "#f4f1e8" },
+    color: { dark: "#111111", light: "#ffffff" },
   });
 }
 
@@ -42,12 +50,7 @@ function readQr(bitmap: ImageBitmap, scale: number): string | null {
   if (!ctx) return null;
   ctx.imageSmoothingEnabled = scale === 1;
   ctx.drawImage(bitmap, 0, 0, fitted.width, fitted.height);
-  const imageData = ctx.getImageData(0, 0, fitted.width, fitted.height);
-  const code = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: "attemptBoth",
-  });
-  const data = code?.data?.trim();
-  return data || null;
+  return decodeQrFromImageData(ctx.getImageData(0, 0, fitted.width, fitted.height));
 }
 
 function fitSize(w: number, h: number, max: number): { width: number; height: number } {

@@ -59,16 +59,13 @@ test("builds a shareable UPI URI without encoding @ in pa", () => {
   assert.match(uri, /tn=Paid%20for%20Rohit/);
   assert.match(uri, /tr=OPTEST1/);
   const text = buildShareText({
-    friendName: "Rohit",
     payeeName: "Gupta Kirana",
-    vpa: "guptakirana@okhdfcbank",
     amount: 430,
     payPageUrl: "https://example.com/pay?pa=guptakirana@okhdfcbank&am=430.00",
   });
-  assert.match(text, /Hey Rohit/);
-  assert.match(text, /₹430.00/);
+  assert.match(text, /Pay ₹430 to Gupta Kirana/);
+  assert.match(text, /Google Pay/);
   assert.match(text, /https:\/\/example.com\/pay/);
-  assert.match(text, /WhatsApp opens its own Pay/);
   assert.doesNotMatch(text, /upi:\/\/pay/);
 });
 
