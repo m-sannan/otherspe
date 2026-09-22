@@ -64,7 +64,7 @@ test("builds a shareable UPI URI without encoding @ in pa", () => {
     payPageUrl: "https://example.com/pay?pa=guptakirana@okhdfcbank&am=430.00",
   });
   assert.match(text, /Pay ₹430 to Gupta Kirana/);
-  assert.match(text, /Google Pay/);
+  assert.match(text, /CRED/);
   assert.match(text, /https:\/\/example.com\/pay/);
   assert.doesNotMatch(text, /upi:\/\/pay/);
 });

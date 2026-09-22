@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Check, ChevronLeft, IndianRupee, ScanLine, Share2 } from "lucide-react";
+import { Check, ChevronLeft, IndianRupee, ScanLine, Share2, Trash2 } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { toast } from "sonner";
 import { AmountKeypad } from "@/components/amount-keypad";
@@ -15,6 +15,7 @@ import {
   setOnboarded,
   setRequestStatus,
   upsertRequest,
+  deleteRequest,
   type SavedRequest,
 } from "@/lib/history";
 import { buildPaySearch } from "@/lib/upi-apps";
@@ -107,7 +108,7 @@ export function OthersPeApp() {
     return (
       <Phone tone="paper">
         <div className="flex min-h-dvh flex-col items-center justify-center">
-          <BrandMark className="size-20 text-lime" />
+          <BrandMark variant="badge" className="size-24" />
         </div>
       </Phone>
     );
@@ -186,6 +187,15 @@ export function OthersPeApp() {
             setActiveId(id);
             setScreen("share");
           }}
+          onDelete={(id) => {
+            const next = deleteRequest(id);
+            setRequests(next);
+            if (activeId === id) {
+              setActiveId(null);
+              setScreen("home");
+            }
+            toast("Removed from this phone");
+          }}
         />
       </Phone>
     );
@@ -213,6 +223,11 @@ export function OthersPeApp() {
           setActiveId(id);
           setScreen("share");
         }}
+        onDelete={(id) => {
+          setRequests(deleteRequest(id));
+          if (activeId === id) setActiveId(null);
+          toast("Removed from this phone");
+        }}
       />
     </Phone>
   );
@@ -228,13 +243,18 @@ function Phone({
   return (
     <div
       className={cn(
-        "min-h-dvh w-full",
-        tone === "lime" && "bg-lime text-ink",
-        tone === "paper" && "bg-paper text-ink",
-        tone === "ink" && "bg-ink text-paper",
+        "flex min-h-dvh w-full justify-center",
+        tone === "ink" ? "bg-ink" : "bg-lime",
       )}
     >
-      <div className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-x-clip">
+      <div
+        className={cn(
+          "page-shell flex min-h-dvh w-full max-w-md flex-col overflow-x-clip md:my-8 md:min-h-[min(52rem,calc(100dvh-4rem))] md:overflow-hidden md:rounded-[2rem] md:shadow-[0_24px_80px_rgba(17,17,17,0.16)]",
+          tone === "lime" && "bg-lime text-ink",
+          tone === "paper" && "bg-paper text-ink",
+          tone === "ink" && "bg-ink text-paper",
+        )}
+      >
         {children}
       </div>
     </div>
@@ -243,8 +263,8 @@ function Phone({
 
 function WelcomeScreen({ onStart }: { onStart: () => void }) {
   return (
-    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <BrandMark className="size-12 text-ink" />
+    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] md:min-h-0 md:flex-1">
+      <BrandMark variant="mark" className="size-14 text-ink" />
       <div className="flex flex-1 flex-col justify-end pb-10">
         <h1 className="font-display text-[2.75rem] font-semibold leading-[1.05] tracking-tight">
           Scan.
@@ -270,23 +290,26 @@ function HomeScreen({
   onScan,
   onSeeAll,
   onOpen,
+  onDelete,
 }: {
   items: SavedRequest[];
   onScan: () => void;
   onSeeAll: () => void;
   onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const preview = items.slice(0, 4);
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
-      <header className="bg-lime px-6 pb-10 pt-[max(2.5rem,calc(env(safe-area-inset-top)+1.5rem))]">
-        <h1 className="font-display text-[2.15rem] font-semibold leading-tight tracking-tight">
+    <div className="flex min-h-dvh flex-col bg-paper md:min-h-0 md:flex-1">
+      <header className="bg-lime px-6 pb-8 pt-[max(2rem,calc(env(safe-area-inset-top)+1.25rem))]">
+        <BrandMark variant="mark" className="size-10 text-ink" />
+        <h1 className="mt-5 font-display text-[2rem] font-semibold leading-tight tracking-tight">
           Welcome to OthersPe!
         </h1>
-        <p className="mt-2 text-right text-sm text-ink-muted">Stuck? Let others pay.</p>
+        <p className="mt-2 text-sm text-ink-muted">Stuck? Let others pay.</p>
       </header>
       <section className="flex flex-1 flex-col px-6 pt-6">
-        <div className="mb-3 flex items-baseline justify-between">
+        <div className="mb-2 flex items-center justify-between">
           <h2 className="text-lg font-semibold">History</h2>
           {items.length > 0 ? (
             <button type="button" onClick={onSeeAll} className="text-sm text-haze">
@@ -303,7 +326,11 @@ function HomeScreen({
           <ul className="divide-y divide-ink/10">
             {preview.map((item) => (
               <li key={item.id}>
-                <HistoryRow item={item} onOpen={() => onOpen(item.id)} />
+                <HistoryRow
+                  item={item}
+                  onOpen={() => onOpen(item.id)}
+                  onDelete={() => onDelete(item.id)}
+                />
               </li>
             ))}
           </ul>
@@ -344,20 +371,20 @@ function AmountScreen({
 }) {
   const demo = isDemoPayload(payload);
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col md:min-h-0 md:flex-1">
       <div className="flex items-center px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <BackButton onClick={onBack} />
       </div>
-      <div className="flex flex-1 flex-col items-center px-6 pt-2">
+      <div className="flex flex-1 flex-col items-center px-6 pt-2 text-center">
         <MerchantAvatar name={payload.name} />
-        <p className="mt-3 flex items-center gap-1 text-lg font-semibold">
-          {payload.name}
-          <span className="inline-flex size-4 items-center justify-center rounded-full bg-ink text-lime">
+        <p className="mt-3 flex max-w-full items-center justify-center gap-1 text-lg font-semibold">
+          <span className="min-w-0 truncate">{payload.name}</span>
+          <span className="inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-ink text-lime">
             <Check className="size-2.5" />
           </span>
         </p>
-        <p className="break-all text-sm text-ink-muted">{payload.vpa}</p>
-        <p className="mt-8 font-display text-6xl font-semibold tabular-nums tracking-tight" data-testid="amount-display">
+        <p className="max-w-full break-all text-sm text-ink-muted">{payload.vpa}</p>
+        <p className="mt-8 font-display text-5xl font-semibold tabular-nums tracking-tight sm:text-6xl" data-testid="amount-display">
           ₹{formatAmountDigits(amountDigits)}
         </p>
         {demo ? (
@@ -493,11 +520,11 @@ function ShareScreen({
   const gotIt = item.status === "got-it";
 
   return (
-    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <div className="-mx-4 flex items-center pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] md:min-h-0 md:flex-1">
+      <div className="-mx-2 flex items-center pt-[max(0.5rem,env(safe-area-inset-top))]">
         <BackButton onClick={onBack} />
       </div>
-      <div className="flex flex-1 flex-col items-center pt-2">
+      <div className="flex flex-1 flex-col items-center pt-2 text-center">
         <MerchantAvatar name={item.name} />
         <p className="mt-3 text-lg font-semibold">{item.name}</p>
         <p className="break-all text-sm text-ink-muted">{item.vpa}</p>
@@ -518,7 +545,7 @@ function ShareScreen({
             <div className="mx-auto aspect-square w-full max-w-48 rounded-xl bg-paper-muted" />
           )}
           <p className="mt-3 text-center text-xs leading-relaxed text-haze">
-            Share the link. Your friend opens OthersPe, then taps Google Pay or scans this QR.
+            Share the link. Your friend opens OthersPe, taps CRED, or scans this QR.
           </p>
         </div>
       </div>
@@ -556,16 +583,19 @@ function HistoryScreen({
   items,
   onBack,
   onOpen,
+  onDelete,
 }: {
   items: SavedRequest[];
   onBack: () => void;
   onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
-      <header className="flex items-center gap-1 px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div className="flex min-h-dvh flex-col bg-paper md:min-h-0 md:flex-1">
+      <header className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <BackButton onClick={onBack} />
-        <h1 className="flex-1 pr-12 text-center text-base font-semibold">History</h1>
+        <h1 className="text-center text-base font-semibold">History</h1>
+        <span />
       </header>
       <p className="px-6 text-center text-xs text-haze">Payment History</p>
       {items.length === 0 ? (
@@ -573,10 +603,14 @@ function HistoryScreen({
           No requests yet. Scan a UPI QR to create one.
         </p>
       ) : (
-        <ul className="mt-4 divide-y divide-ink/10 px-6" data-testid="history-list">
+        <ul className="mt-2 divide-y divide-ink/10 px-6" data-testid="history-list">
           {items.map((item) => (
             <li key={item.id}>
-              <HistoryRow item={item} onOpen={() => onOpen(item.id)} />
+              <HistoryRow
+                item={item}
+                onOpen={() => onOpen(item.id)}
+                onDelete={() => onDelete(item.id)}
+              />
             </li>
           ))}
         </ul>
@@ -585,25 +619,46 @@ function HistoryScreen({
   );
 }
 
-function HistoryRow({ item, onOpen }: { item: SavedRequest; onOpen: () => void }) {
+function HistoryRow({
+  item,
+  onOpen,
+  onDelete,
+}: {
+  item: SavedRequest;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center gap-3 py-3.5 text-left"
-    >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-ink">
-        <IndianRupee className="size-4" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{item.name}</span>
-        <span className="block text-xs text-haze">
-          {formatWhen(item.createdAt)}
-          {item.status === "got-it" ? " · Got it" : " · Waiting"}
+    <div className="flex items-center gap-1 py-3">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-lime text-ink">
+          <IndianRupee className="size-4" />
         </span>
-      </span>
-      <span className="shrink-0 font-medium tabular-nums">₹{formatInrPretty(item.amount)}</span>
-    </button>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium">{item.name}</span>
+          <span className="block truncate text-xs text-haze">
+            {formatWhen(item.createdAt)}
+            {item.status === "got-it" ? " · Got it" : " · Waiting"}
+          </span>
+        </span>
+        <span className="shrink-0 font-medium tabular-nums">
+          ₹{formatInrPretty(item.amount)}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label={`Delete ${item.name}`}
+        data-testid="delete-request"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full text-haze hover:text-ink"
+      >
+        <Trash2 className="size-4" />
+      </button>
+    </div>
   );
 }
 
@@ -617,9 +672,9 @@ function ErrorScreen({
   onRetry: () => void;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
+    <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] md:min-h-0 md:flex-1">
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <BrandMark className="size-16 text-ink" />
+        <BrandMark variant="mark" className="size-16 text-ink" />
         <h1 className="mt-8 font-display text-2xl font-semibold tracking-tight">{title}</h1>
         <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink-muted">{body}</p>
       </div>

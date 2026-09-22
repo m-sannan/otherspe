@@ -11,9 +11,9 @@ import {
 const uri =
   "upi://pay?pa=sneha@oksbi&pn=Sneha&tr=OP1&am=1.00&cu=INR";
 
-test("Google Pay is the first suggested app", () => {
-  assert.equal(UPI_APPS[0]?.id, "gpay");
-  assert.equal(UPI_APPS[1]?.id, "cred");
+test("CRED is the first suggested app", () => {
+  assert.equal(UPI_APPS[0]?.id, "cred");
+  assert.equal(UPI_APPS[1]?.id, "gpay");
 });
 
 test("strips the scheme to leave the query", () => {

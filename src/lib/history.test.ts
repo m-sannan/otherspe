@@ -8,6 +8,7 @@ import {
   setOnboarded,
   setRequestStatus,
   upsertRequest,
+  deleteRequest,
   type SavedRequest,
 } from "./history.ts";
 
@@ -53,4 +54,13 @@ test("upsert puts the newest request first and can mark it paid", () => {
   const paid = setRequestStatus("b", "got-it", s);
   assert.equal(paid[0]?.status, "got-it");
   assert.ok(s.getItem(HISTORY_KEY)?.includes("got-it"));
+});
+
+test("deleteRequest removes one item and keeps the rest", () => {
+  const s = memory();
+  upsertRequest(sample("a"), s);
+  upsertRequest(sample("b"), s);
+  const next = deleteRequest("b", s);
+  assert.equal(next.length, 1);
+  assert.equal(next[0]?.id, "a");
 });

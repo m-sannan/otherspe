@@ -82,51 +82,55 @@ function PayPage() {
 
   if (!payload || amount == null) {
     return (
-      <main className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center bg-lime px-6 text-ink">
-        <p className="font-display text-2xl font-semibold">OthersPe</p>
-        <p className="mt-3 text-sm leading-relaxed text-ink-muted">
-          This payment link is missing a UPI ID or amount.
-        </p>
-        <Link to="/" className="mt-6 text-sm font-medium underline underline-offset-4">
-          Create a request
-        </Link>
-      </main>
+      <div className="flex min-h-dvh w-full justify-center bg-lime">
+        <main className="page-shell flex min-h-dvh w-full max-w-md flex-col justify-center bg-lime px-6 text-ink md:my-8 md:min-h-[min(52rem,calc(100dvh-4rem))] md:rounded-[2rem] md:shadow-[0_24px_80px_rgba(17,17,17,0.16)]">
+          <p className="font-display text-2xl font-semibold">OthersPe</p>
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+            This payment link is missing a UPI ID or amount.
+          </p>
+          <Link to="/" className="mt-6 text-sm font-medium underline underline-offset-4">
+            Create a request
+          </Link>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="page-shell mx-auto flex min-h-dvh w-full max-w-md flex-col bg-lime px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] text-ink">
-      <p className="text-center text-xs font-medium text-ink-muted">Pay with OthersPe</p>
-      <div className="mt-6 flex flex-col items-center">
-        <MerchantAvatar name={payload.name} />
-        <h1 className="mt-3 break-words text-center text-xl font-semibold">{payload.name}</h1>
-        <p className="break-all text-center text-sm text-ink-muted">{payload.vpa}</p>
-        <p className="mt-6 font-display text-5xl font-semibold tabular-nums tracking-tight">
-          ₹{formatInrPretty(amount)}
-        </p>
-        {payload.note ? (
-          <p className="mt-2 text-center text-sm text-ink-muted">{payload.note}</p>
-        ) : null}
-      </div>
+    <div className="flex min-h-dvh w-full justify-center bg-lime">
+      <main className="page-shell flex min-h-dvh w-full max-w-md flex-col bg-lime px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] text-ink md:my-8 md:min-h-[min(52rem,calc(100dvh-4rem))] md:overflow-y-auto md:rounded-[2rem] md:shadow-[0_24px_80px_rgba(17,17,17,0.16)]">
+        <p className="text-center text-xs font-medium text-ink-muted">Pay with OthersPe</p>
+        <div className="mt-6 flex flex-col items-center text-center">
+          <MerchantAvatar name={payload.name} />
+          <h1 className="mt-3 max-w-full break-words text-xl font-semibold">{payload.name}</h1>
+          <p className="max-w-full break-all text-sm text-ink-muted">{payload.vpa}</p>
+          <p className="mt-6 font-display text-5xl font-semibold tabular-nums tracking-tight">
+            ₹{formatInrPretty(amount)}
+          </p>
+          {payload.note ? (
+            <p className="mt-2 text-sm text-ink-muted">{payload.note}</p>
+          ) : null}
+        </div>
 
-      <section className="mt-6 rounded-[1.5rem] bg-paper p-5">
-        {qrUrl ? (
-          <img
-            src={qrUrl}
-            alt="Payment QR"
-            className="mx-auto aspect-square w-full max-w-48"
-          />
-        ) : (
-          <div className="mx-auto aspect-square w-full max-w-48 rounded-xl bg-paper-muted" />
-        )}
-        <p className="mt-3 text-center text-xs leading-relaxed text-haze">
-          Scan this inside Google Pay, or tap a button below. Buttons will not work from WhatsApp’s in-app browser — open in Chrome.
-        </p>
-      </section>
+        <section className="mt-6 rounded-[1.5rem] bg-paper p-5">
+          {qrUrl ? (
+            <img
+              src={qrUrl}
+              alt="Payment QR"
+              className="mx-auto aspect-square w-full max-w-48"
+            />
+          ) : (
+            <div className="mx-auto aspect-square w-full max-w-48 rounded-xl bg-paper-muted" />
+          )}
+          <p className="mt-3 text-center text-xs leading-relaxed text-haze">
+            Tap CRED — that’s the one that completes. If you’re inside WhatsApp, open this page in Chrome first.
+          </p>
+        </section>
 
-      <section className="mt-5 flex flex-col gap-3">
-        <UpiAppButtons upiUri={upiUri} />
-      </section>
-    </main>
+        <section className="mt-5 flex flex-col gap-3 pb-2">
+          <UpiAppButtons upiUri={upiUri} />
+        </section>
+      </main>
+    </div>
   );
 }

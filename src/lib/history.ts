@@ -92,6 +92,15 @@ export function setRequestStatus(
   return next;
 }
 
+export function deleteRequest(
+  id: string,
+  storage: StorageLike = getAppStorage(),
+): SavedRequest[] {
+  const next = loadRequests(storage).filter((r) => r.id !== id);
+  saveRequests(next, storage);
+  return next;
+}
+
 function isSavedRequest(value: unknown): value is SavedRequest {
   if (!value || typeof value !== "object") return false;
   const v = value as SavedRequest;

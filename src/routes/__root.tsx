@@ -17,7 +17,7 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       {
         name: "description",
-        content: "Scan a UPI QR, set an amount, share a pay page. Your friend taps Google Pay.",
+        content: "Scan a UPI QR, set an amount, share a pay page. Your friend taps CRED.",
       },
       { name: "theme-color", content: "#c7e941" },
       { name: "mobile-web-app-capable", content: "yes" },

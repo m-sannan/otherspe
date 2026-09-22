@@ -10,16 +10,16 @@ export type UpiApp = {
 
 export const UPI_APPS: UpiApp[] = [
   {
-    id: "gpay",
-    label: "Google Pay",
-    scheme: "tez://upi/pay",
-    androidPackage: "com.google.android.apps.nbu.paisa.user",
-  },
-  {
     id: "cred",
     label: "CRED",
     scheme: "credpay://upi/pay",
     androidPackage: "com.dreamplug.androidapp",
+  },
+  {
+    id: "gpay",
+    label: "Google Pay",
+    scheme: "tez://upi/pay",
+    androidPackage: "com.google.android.apps.nbu.paisa.user",
   },
   {
     id: "phonepe",
@@ -34,6 +34,10 @@ export const UPI_APPS: UpiApp[] = [
     androidPackage: "net.one97.paytm",
   },
 ];
+
+export const PRIMARY_APP = UPI_APPS[0];
+
+export const FALLBACK_APPS = UPI_APPS.filter((app) => app.id !== "cred");
 
 
 export function upiQueryString(upiUri: string): string {
