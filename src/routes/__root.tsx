@@ -22,8 +22,19 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#c7e941" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "format-detection", content: "telephone=no" },
+      { property: "og:title", content: "OthersPe — Scan a UPI QR, share a pay page" },
+      {
+        property: "og:description",
+        content:
+          "Scan a merchant UPI QR, set an amount, share a pay page so someone else can pay — CRED, any UPI app, or scan the QR.",
+      },
+      { property: "og:url", content: "https://otherspe.vercel.app/" },
+      { property: "og:image", content: "https://otherspe.vercel.app/og.jpg" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://otherspe.vercel.app/og.jpg" },
     ],
     links: [
+      { rel: "canonical", href: "https://otherspe.vercel.app/" },
       { rel: "icon", href: "/favicon.ico?v=2", sizes: "any" },
       { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png?v=2" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg?v=2" },

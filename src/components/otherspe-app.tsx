@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 type Screen = "boot" | "welcome" | "home" | "scan" | "amount" | "share" | "history" | "error";
 
 export function OthersPeApp() {
-  const [screen, setScreen] = useState<Screen>("boot");
+  const [screen, setScreen] = useState<Screen>("welcome");
   const [requests, setRequests] = useState<SavedRequest[]>([]);
   const [payload, setPayload] = useState<UpiPayload | null>(null);
   const [amountDigits, setAmountDigits] = useState("");
@@ -295,21 +295,52 @@ function Phone({
 }
 
 function WelcomeScreen({ onStart }: { onStart: () => void }) {
+  const steps = [
+    { icon: ScanLine, text: "1. Scan any merchant or personal UPI QR" },
+    { icon: IndianRupee, text: "2. Set the exact amount and an optional note" },
+    { icon: Share2, text: "3. Share the pay page — they tap CRED, pick any UPI app, or scan the QR" },
+  ] as const;
+
   return (
     <div className="flex min-h-dvh flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] md:min-h-0 md:flex-1">
       <BrandMark variant="mark" className="size-14 text-ink" />
-      <div className="flex flex-1 flex-col justify-end pb-10">
-        <h1 className="font-display text-[2.75rem] font-semibold leading-[1.05] tracking-tight">
+      <div className="flex flex-1 flex-col justify-end py-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+          OthersPe · UPI payment requests
+        </p>
+        <h1 className="mt-2 font-display text-[2.5rem] font-semibold leading-[1.05] tracking-tight">
           Scan.
           <br />
           Request.
           <br />
           Get Paid.
         </h1>
-        <p className="mt-4 max-w-[16rem] text-base leading-relaxed text-ink-muted">
-          Request a payment from anyone with a UPI app. Everything stays on
-          this phone — no account, no server.
+        <p className="mt-3 max-w-[20rem] text-sm leading-relaxed text-ink-muted">
+          Pay a merchant or personal UPI QR on someone else’s behalf. Request a
+          payment from anyone with a UPI app — everything stays on this phone
+          with no account and no server.
         </p>
+        <ul className="mt-4 space-y-2 rounded-xl bg-paper/45 p-3.5 text-xs text-ink">
+          {steps.map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-center gap-2.5">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-ink text-lime">
+                <Icon className="size-3.5" />
+              </span>
+              <span className="leading-snug font-medium">{text}</span>
+            </li>
+          ))}
+        </ul>
+        <details className="mt-3 rounded-lg bg-ink/5 px-3 py-2 text-xs leading-relaxed text-ink-muted">
+          <summary className="cursor-pointer font-medium text-ink">
+            Why I built this (PM case study)
+          </summary>
+          <p className="mt-1.5">
+            <strong>Problem:</strong> You’re holding a shop’s UPI QR, your wallet is short, and forwarding a raw QR screenshot or <code>upi://</code> link in WhatsApp breaks or loses the amount.
+          </p>
+          <p className="mt-1">
+            <strong>Product decisions:</strong> Reconstruct the UPI/BharatQR payload client-side with the exact amount, generate a clean HTTPS <code>/pay</code> link with a CRED-first deep link + package-level UPI app chooser + scannable QR, and keep history in local storage with zero backend, zero Collect API, and no custody of funds (unlike delegated setups like UPI Circle).
+          </p>
+        </details>
       </div>
       <Button size="lg" className="w-full" onClick={onStart} data-testid="get-started">
         Get Started
@@ -407,7 +438,7 @@ function HomeEmpty() {
       </div>
       <p className="mt-4 px-1 text-xs leading-relaxed text-haze">
         Fun fact: a UPI QR is just an address. The person pointing the camera
-        never had to be the person who pays.
+        never had to be the person who pays. Built by Mohammed Sannan as a zero-server UPI flow — money never touches OthersPe.
       </p>
     </div>
   );

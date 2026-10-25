@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://otherspe.vercel.app/sitemap.xml

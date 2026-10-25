@@ -100,7 +100,7 @@ export function publicAppHost(hostHeader) {
     .toLowerCase();
   if (!host || !/^[a-z0-9.-]+$/.test(host) || !host.includes(".")) return "";
   if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return "";
-  if (isVercelSystemHost(host)) return "";
+  if (isVercelSystemHost(host) && host !== "otherspe.vercel.app") return "";
   return host;
 }
 
@@ -362,6 +362,7 @@ export function grokOgHeadTags({
     const color = !custom ? placeholderCardColor(site) : "";
     if (color) image += `&color=${encodeURIComponent(color)}`;
     tags.push(`<meta property="og:image" content="${escapeHtml(image)}">`);
+    tags.push(`<meta name="twitter:image" content="${escapeHtml(image)}">`);
     tags.push(`<meta property="og:image:width" content="1200">`);
     tags.push(`<meta property="og:image:height" content="630">`);
     const banner = String(site.banner ?? "").trim();
