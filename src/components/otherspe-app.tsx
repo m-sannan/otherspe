@@ -340,6 +340,23 @@ function WelcomeScreen({ onStart }: { onStart: () => void }) {
           <p className="mt-1">
             <strong>Product decisions:</strong> Reconstruct the UPI/BharatQR payload client-side with the exact amount, generate a clean HTTPS <code>/pay</code> link with a CRED-first deep link + package-level UPI app chooser + scannable QR, and keep history in local storage with zero backend, zero Collect API, and no custody of funds (unlike delegated setups like UPI Circle).
           </p>
+          <p className="mt-1.5">
+            Built by{" "}
+            <a
+              href="https://msannan.vercel.app/"
+              className="underline font-medium text-ink"
+              rel="author"
+            >
+              Sannan (Mohammed Sannan V S)
+            </a>{" "}
+            ·{" "}
+            <a
+              href="https://msannan.vercel.app/otherspe.html"
+              className="underline text-ink"
+            >
+              Read the full OthersPe PM case study
+            </a>
+          </p>
         </details>
       </div>
       <Button size="lg" className="w-full" onClick={onStart} data-testid="get-started">

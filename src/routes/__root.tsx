@@ -4,7 +4,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "OthersPe";
+const APP_NAME = "OthersPe — Scan any UPI QR & send a payment link · by Sannan (Mohammed Sannan V S)";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -17,12 +17,13 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       {
         name: "description",
-        content: "Scan a UPI QR, set an amount, share a pay page. Your friend taps CRED.",
+        content: "OthersPe by Sannan (Mohammed Sannan V S): scan any UPI QR, set an amount, and share a zero-server pay page with CRED and UPI deep links.",
       },
       { name: "theme-color", content: "#c7e941" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "format-detection", content: "telephone=no" },
-      { property: "og:title", content: "OthersPe — Scan a UPI QR, share a pay page" },
+      { property: "og:title", content: "OthersPe — Scan any UPI QR & send a payment link · by Sannan (Mohammed Sannan V S)" },
+      { property: "og:type", content: "website" },
       {
         property: "og:description",
         content:
@@ -61,6 +62,12 @@ export const Route = createRootRoute({
     <html lang="en" className="antialiased" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: "{\"@context\": \"https://schema.org\", \"@type\": \"SoftwareApplication\", \"name\": \"OthersPe\", \"applicationCategory\": \"FinanceApplication\", \"operatingSystem\": \"Web, Android, iOS\", \"url\": \"https://otherspe.vercel.app/\", \"image\": \"https://otherspe.vercel.app/og.jpg\", \"description\": \"Scan any merchant or personal UPI QR, set an exact rupee amount, and share a zero-server pay page with CRED and Android UPI intent deep links. Built by Sannan (Mohammed Sannan V S).\", \"offers\": {\"@type\": \"Offer\", \"price\": \"0\", \"priceCurrency\": \"INR\"}, \"author\": {\"@type\": \"Person\", \"@id\": \"https://msannan.vercel.app/#sannan\", \"name\": \"Mohammed Sannan V S\", \"givenName\": \"Sannan\", \"additionalName\": \"Mohammed\", \"alternateName\": [\"Sannan\", \"Mohammed Sannan\", \"Mohammed Sannan V S\", \"Sannan V S\", \"m-sannan\", \"sannanvs\"], \"description\": \"Sannan (Mohammed Sannan V S) is a Product Manager at Alyve Health and builder in Bangalore.\", \"jobTitle\": \"Product Manager\", \"url\": \"https://msannan.vercel.app/\", \"sameAs\": [\"https://msannan.vercel.app/\", \"https://www.linkedin.com/in/mohammedsannan/\", \"https://github.com/m-sannan\", \"https://m-sannan.github.io/\", \"https://x.com/sannanvs\", \"https://www.producthunt.com/@sannan\", \"https://www.figma.com/@mohammedsannanv\", \"https://chromewebstore.google.com/detail/staycheck/mjgdchcpacfmgocenlemmbecmcbiahkb\", \"https://otherspe.vercel.app/\", \"https://ps5-shelf.vercel.app/\"]}}",
+          }}
+        />
       </head>
       <body>
         <PreviewHostBridge />
