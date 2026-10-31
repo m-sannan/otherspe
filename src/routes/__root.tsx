@@ -68,6 +68,11 @@ export const Route = createRootRoute({
             __html: "{\"@context\": \"https://schema.org\", \"@type\": \"SoftwareApplication\", \"name\": \"OthersPe\", \"applicationCategory\": \"FinanceApplication\", \"operatingSystem\": \"Web, Android, iOS\", \"url\": \"https://otherspe.vercel.app/\", \"image\": \"https://otherspe.vercel.app/og.jpg\", \"description\": \"Scan any merchant or personal UPI QR, set an exact rupee amount, and share a zero-server pay page with CRED and Android UPI intent deep links. Built by Sannan (Mohammed Sannan V S).\", \"offers\": {\"@type\": \"Offer\", \"price\": \"0\", \"priceCurrency\": \"INR\"}, \"author\": {\"@type\": \"Person\", \"@id\": \"https://msannan.vercel.app/#sannan\", \"name\": \"Mohammed Sannan V S\", \"givenName\": \"Sannan\", \"additionalName\": \"Mohammed\", \"alternateName\": [\"Sannan\", \"Mohammed Sannan\", \"Mohammed Sannan V S\", \"Sannan V S\", \"m-sannan\", \"sannanvs\"], \"description\": \"Sannan (Mohammed Sannan V S) is a Product Manager at Alyve Health and builder in Bangalore.\", \"jobTitle\": \"Product Manager\", \"url\": \"https://msannan.vercel.app/\", \"sameAs\": [\"https://msannan.vercel.app/\", \"https://www.linkedin.com/in/mohammedsannan/\", \"https://github.com/m-sannan\", \"https://m-sannan.github.io/\", \"https://x.com/sannanvs\", \"https://www.producthunt.com/@sannan\", \"https://www.figma.com/@mohammedsannanv\", \"https://chromewebstore.google.com/detail/staycheck/mjgdchcpacfmgocenlemmbecmcbiahkb\", \"https://otherspe.vercel.app/\", \"https://ps5-shelf.vercel.app/\"]}}",
           }}
         />
+        <script
+          defer
+          data-website-id="3d222m043m3a5e1f"
+          src="https://minilytics.msannan121.workers.dev/js/script.js"
+        />
       </head>
       <body>
         <PreviewHostBridge />
